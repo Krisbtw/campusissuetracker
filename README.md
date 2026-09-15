@@ -1,13 +1,13 @@
 # 🏫 Campus Issue Tracker (FixMyCampus)
 
-[![Live Web App](https://img.shields.io/badge/🚀_Live_Demo-campus--issue--tracker-00D4FF?style=for-the-badge&logo=render&logoColor=white)](https://campus-issue-tracker-main.onrender.com)
-[![Hosted on Render](https://img.shields.io/badge/Hosted_on-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://campus-issue-tracker-main.onrender.com)
+[![Live Web App](https://img.shields.io/badge/🚀_Live_Demo-campus--issue--tracker-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://campusissuetracker-iota.vercel.app/)
+[![Hosted on Vercel](https://img.shields.io/badge/Hosted_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://campusissuetracker-iota.vercel.app/)
 [![Cloud Storage](https://img.shields.io/badge/Cloud_Media-Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 [![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
 [![Gemini AI](https://img.shields.io/badge/Google_Gemini-1.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-Proprietary_%2F_All_Rights_Reserved-red?style=for-the-badge)](#-license--proprietary-notice)
 
-> **A centralized, cloud-hosted platform for reporting, managing, and resolving campus facility issues.** Fully deployed on **Render** with **Cloudinary** media storage and **Google Gemini AI** integration.
+> **A centralized, cloud-hosted platform for reporting, managing, and resolving campus facility issues.** Fully deployed on **Vercel** with **Cloudinary** media storage and **Google Gemini AI** integration.
 
 ---
 
@@ -17,8 +17,8 @@ You can directly explore the live production platform without any local installa
 
 <div align="center">
 
-### 🔗 **[Click Here to Launch FixMyCampus Live](https://campus-issue-tracker-main.onrender.com)**
-`https://campus-issue-tracker-main.onrender.com`
+### 🔗 **[Click Here to Launch FixMyCampus Live](https://campusissuetracker-iota.vercel.app/)**
+`https://campusissuetracker-iota.vercel.app/`
 
 </div>
 
@@ -26,7 +26,7 @@ You can directly explore the live production platform without any local installa
 
 ### 🔑 Instant Demo Login Credentials
 
-The live deployment on Render comes pre-loaded with active accounts for testing all user roles:
+The live deployment on Vercel comes pre-loaded with active accounts for testing all user roles:
 
 | Role | Email Address | Password | Portal Scope |
 | :--- | :--- | :--- | :--- |
@@ -42,10 +42,10 @@ The live deployment on Render comes pre-loaded with active accounts for testing 
 
 **Campus Issue Tracker (FixMyCampus)** is a web-based facility management application designed to eliminate paper logs, informal messages, and untracked complaints across educational institutions. 
 
-The application is deployed on **Render Cloud** and utilizes **Cloudinary** for image storage and asset optimization, providing instant access from any device.
+The application is deployed on **Vercel** and utilizes **Cloudinary** for image storage and asset optimization, providing instant access from any device.
 
 ### 🌟 Key Highlights:
-* ☁️ **Hosted on Render:** Containerized and continuously deployed on Render's cloud infrastructure for high availability.
+* ☁️ **Hosted on Vercel:** Serverless and continuously deployed on Vercel for high availability.
 * 📸 **Cloudinary Cloud Storage:** High-speed cloud photo storage and CDN delivery for all uploaded issue evidence.
 * 🤖 **AI-Powered Reporting:** Integrated conversational AI assistant and multilingual voice translation to auto-fill ticket details.
 * 👥 **Role-Based Access Control (RBAC):** Customized dashboards for Students, Faculty, Maintenance Teams, and Administrators.
@@ -95,8 +95,8 @@ flowchart LR
         U3["🛡️ Administrator<br><b>Command Center</b>"]
     end
 
-    subgraph RenderPlatform ["☁️ Hosted on Render"]
-        App["🚀 <b>FixMyCampus Web Application</b><br>PHP 8.2 • Apache • RBAC Middleware"]
+    subgraph VercelPlatform ["▲ Hosted on Vercel"]
+        App["🚀 <b>FixMyCampus Web Application</b><br>PHP 8.2 • Serverless • RBAC Middleware"]
     end
 
     subgraph CloudServices ["🌐 Integrated Cloud Services"]
@@ -142,7 +142,7 @@ flowchart LR
 
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Live Hosting** | **Render** | Cloud hosting running containerized PHP 8.2 & Apache environment |
+| **Live Hosting** | **Vercel** | Serverless cloud hosting with vercel-php runtime |
 | **Media & Storage** | **Cloudinary** | Cloud storage for issue evidence photos and CDN image delivery |
 | **Backend** | **PHP 8.2** | Secure session management, RBAC routing, and business logic |
 | **AI Integration** | **Google Gemini 1.5** | Natural language ticket parsing & multilingual voice translation |
@@ -154,8 +154,8 @@ flowchart LR
 
 ## 🚀 Live Demo & Links
 
-* 🔗 **Live Website:** [https://campus-issue-tracker-main.onrender.com](https://campus-issue-tracker-main.onrender.com)
-* 📁 **Source Repository:** [https://github.com/krishashetdz/Campus-issue-Tracker](https://github.com/krishashetdz/Campus-issue-Tracker)
+* 🔗 **Live Website:** [https://campusissuetracker-iota.vercel.app/](https://campusissuetracker-iota.vercel.app/)
+* 📁 **Source Repository:** [https://github.com/Krisbtw/campusissuetracker](https://github.com/Krisbtw/campusissuetracker)
 
 ---
 

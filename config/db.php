@@ -1,7 +1,7 @@
 <?php
 /**
  * FixMyCampus - Universal Database Configuration (PostgreSQL / MySQL)
- * Supports Supabase, Vercel, Neon, Render, Docker, and local XAMPP/MySQL
+ * Supports Supabase, Vercel, Neon, Docker, and local XAMPP/MySQL
  */
 
 // 1. Auto-load .env file if present in project root
@@ -81,13 +81,32 @@ if (!defined('DB_PASS'))   define('DB_PASS', $pass);
 if (!defined('DB_NAME'))   define('DB_NAME', $db);
 
 // Dynamic BASE_URL detection
+$isVercel = !empty(getenv('VERCEL')) || !empty($_ENV['VERCEL']) || !empty($_SERVER['VERCEL'])
+    || (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)
+    || !empty(getenv('VERCEL_URL')) || !empty($_SERVER['VERCEL_URL']);
+
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 $appSubdir = (strpos($scriptDir, '/fixmycampus') !== false) ? '/fixmycampus/' : '/';
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
-$proto = $isHttps ? 'https' : 'http';
-$detectedBaseUrl = (isset($_SERVER['HTTP_HOST']) ? ($proto . '://' . $_SERVER['HTTP_HOST'] . $appSubdir) : 'http://localhost/fixmycampus/');
+
+$host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['VERCEL_URL'] ?? (getenv('VERCEL_URL') ?: '')));
+
+if ($isVercel || (!empty($host) && strpos($host, 'vercel.app') !== false)) {
+    // On Vercel, a root path '/' ensures browser stays on deployment domain
+    $detectedBaseUrl = '/';
+} elseif (!empty($host)) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    $proto = $isHttps ? 'https' : 'http';
+    $detectedBaseUrl = $proto . '://' . $host . $appSubdir;
+} else {
+    $detectedBaseUrl = $appSubdir;
+}
+
+$rawBaseUrlEnv = getenv('BASE_URL') ?: ($_ENV['BASE_URL'] ?? ($_SERVER['BASE_URL'] ?? ''));
+if ($isVercel && (empty($rawBaseUrlEnv) || strpos($rawBaseUrlEnv, 'localhost') !== false)) {
+    $rawBaseUrlEnv = '/';
+}
 
 if (!file_exists(__DIR__ . '/../uploads/')) {
     @mkdir(__DIR__ . '/../uploads/', 0777, true);
@@ -95,7 +114,7 @@ if (!file_exists(__DIR__ . '/../uploads/')) {
 if (!file_exists(__DIR__ . '/../uploads/issues/')) {
     @mkdir(__DIR__ . '/../uploads/issues/', 0777, true);
 }
-if (!defined('BASE_URL')) define('BASE_URL', getenv('BASE_URL') ?: $detectedBaseUrl);
+if (!defined('BASE_URL')) define('BASE_URL', !empty($rawBaseUrlEnv) ? rtrim($rawBaseUrlEnv, '/') . '/' : $detectedBaseUrl);
 if (!defined('UPLOAD_DIR')) define('UPLOAD_DIR', __DIR__ . '/../uploads/issues/');
 if (!defined('UPLOAD_URL')) define('UPLOAD_URL', BASE_URL . 'uploads/issues/');
 if (!defined('MAX_FILE_SIZE')) define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB
