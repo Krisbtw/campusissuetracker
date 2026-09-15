@@ -70,6 +70,12 @@ if ($ext !== 'php') {
 $_SERVER['SCRIPT_FILENAME'] = $realTarget;
 $_SERVER['SCRIPT_NAME'] = str_replace($baseDir, '', $realTarget);
 $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
+if (empty($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['VERCEL_URL'] ?? (getenv('VERCEL_URL') ?: 'campusissuetracker-iota.vercel.app'));
+}
+if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
+    $_SERVER['HTTPS'] = 'on';
+}
 
 // Switch working directory to target file's directory so relative includes (e.g. '../config/db.php') resolve properly
 chdir(dirname($realTarget));
