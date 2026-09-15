@@ -88,17 +88,17 @@ $isVercel = !empty(getenv('VERCEL')) || !empty($_ENV['VERCEL']) || !empty($_SERV
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 $appSubdir = (strpos($scriptDir, '/fixmycampus') !== false) ? '/fixmycampus/' : '/';
 
-$host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['VERCEL_URL'] ?? (getenv('VERCEL_URL') ?: '')));
+$domainHost = $_SERVER['HTTP_HOST'] ?? ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['VERCEL_URL'] ?? (getenv('VERCEL_URL') ?: '')));
 
-if ($isVercel || (!empty($host) && strpos($host, 'vercel.app') !== false)) {
+if ($isVercel || (!empty($domainHost) && strpos($domainHost, 'vercel.app') !== false)) {
     // On Vercel, a root path '/' ensures browser stays on deployment domain
     $detectedBaseUrl = '/';
-} elseif (!empty($host)) {
+} elseif (!empty($domainHost)) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
         || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
     $proto = $isHttps ? 'https' : 'http';
-    $detectedBaseUrl = $proto . '://' . $host . $appSubdir;
+    $detectedBaseUrl = $proto . '://' . $domainHost . $appSubdir;
 } else {
     $detectedBaseUrl = $appSubdir;
 }
