@@ -9,7 +9,11 @@ $sf=trim($_GET['status']??'');$pf=trim($_GET['priority']??'');$search=trim($_GET
 $where=["i.reported_by=?"];$params=[$u['id']];
 if($sf){$where[]="i.status=?";$params[]=$sf;}
 if($pf){$where[]="i.priority=?";$params[]=$pf;}
-if($search){$where[]="(i.title LIKE ? OR i.location LIKE ?)";$params[]="%$search%";$params[]="%$search%";}
+if($search){
+  $searchLower = '%' . mb_strtolower($search, 'UTF-8') . '%';
+  $where[]="(LOWER(i.title) LIKE ? OR LOWER(i.location) LIKE ? OR LOWER(c.category_name) LIKE ? OR LOWER(i.description) LIKE ?)";
+  $params[]=$searchLower;$params[]=$searchLower;$params[]=$searchLower;$params[]=$searchLower;
+}
 $sql="SELECT i.*,c.category_name FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id WHERE ".implode(' AND ',$where)." ORDER BY i.created_at DESC";
 $stmt=$pdo->prepare($sql);$stmt->execute($params);$issues=$stmt->fetchAll();
 $pageTitle='My Issues';$pageSubtitle='Track all your submitted issues';

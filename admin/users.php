@@ -21,7 +21,11 @@ $roleFilter = $_GET['role'] ?? '';
 $search     = trim($_GET['search'] ?? '');
 $where=['1=1']; $params=[];
 if ($roleFilter) { $where[]="role=?"; $params[]=$roleFilter; }
-if ($search)     { $where[]="(full_name LIKE ? OR email LIKE ? OR department LIKE ?)"; $params[]="%$search%"; $params[]="%$search%"; $params[]="%$search%"; }
+if ($search)     {
+    $searchLower = '%' . mb_strtolower($search, 'UTF-8') . '%';
+    $where[] = "(LOWER(full_name) LIKE ? OR LOWER(email) LIKE ? OR LOWER(department) LIKE ?)";
+    $params[] = $searchLower; $params[] = $searchLower; $params[] = $searchLower;
+}
 
 $sql="SELECT u.*,(SELECT COUNT(*) FROM issues i WHERE i.reported_by=u.user_id) AS issue_count FROM users u WHERE ".implode(' AND ',$where)." ORDER BY u.created_at DESC";
 $stmt=$pdo->prepare($sql); $stmt->execute($params);
