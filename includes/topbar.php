@@ -36,17 +36,9 @@ $currentFile=basename($_SERVER['PHP_SELF']);
     <button class="btn-hamburger" id="menuToggle" onclick="openSidebar()" aria-label="Open menu">
       <i class="bi bi-list"></i>
     </button>
-    <a class="app-brand" href="<?=$base?>index.php">FixMyCampus</a>
-    <nav class="app-nav-links" aria-label="Primary">
-      <?php foreach($navMenu as $item):?>
-        <a href="<?=$item['href']?>" class="app-nav-link<?=(basename($item['href'])===$currentFile)?' active':''?>">
-          <span><?=$item['label']?></span>
-          <?php if(!empty($item['badge'])&&$item['badge']>0):?>
-            <span class="menu-badge"><?=$item['badge']?></span>
-          <?php endif;?>
-        </a>
-      <?php endforeach;?>
-    </nav>
+    <div class="topbar-brand-mobile">
+      <a class="app-brand" href="<?=$base?>index.php">FixMyCampus</a>
+    </div>
   </div>
   <div class="topbar-right">
     <button class="search-trigger" onclick="openSearch()" aria-label="Search">
@@ -87,6 +79,10 @@ $currentFile=basename($_SERVER['PHP_SELF']);
         <div class="topbar-user-role"><?=$role?></div>
       </div>
     </div>
+    <a href="<?=$base?>logout.php" class="topbar-logout-btn" title="Sign out" aria-label="Sign out">
+      <i class="bi bi-box-arrow-right"></i>
+      <span class="logout-text">Logout</span>
+    </a>
   </div>
 </header>
 <div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
