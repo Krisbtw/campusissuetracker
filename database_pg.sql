@@ -98,9 +98,9 @@ ON CONFLICT (category_name) DO NOTHING;
 
 -- Default Users (passwords are bcrypt of 'password123')
 INSERT INTO users (full_name, email, password, role, department, phone) VALUES
-('Admin User', 'admin@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'Administration', '9876543210'),
-('John Student', 'student@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Computer Science', '9876543211'),
-('Jane Staff', 'staff@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff', 'Library', '9876543212'),
-('Mike Maintenance', 'maintenance@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'maintenance', 'Maintenance Dept', '9876543213'),
-('Sarah Techie', 'tech@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'maintenance', 'IT Department', '9876543214')
+('Admin User', 'admin@fixmycampus.com', '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'admin', 'Administration', '9876543210'),
+('John Student', 'student@fixmycampus.com', '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'student', 'Computer Science', '9876543211'),
+('Jane Staff', 'staff@fixmycampus.com', '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'staff', 'Library', '9876543212'),
+('Mike Maintenance', 'maintenance@fixmycampus.com', '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'maintenance', 'Maintenance Dept', '9876543213'),
+('Sarah Techie', 'tech@fixmycampus.com', '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'maintenance', 'IT Department', '9876543214')
 ON CONFLICT (email) DO NOTHING;

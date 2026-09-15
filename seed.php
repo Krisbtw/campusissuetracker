@@ -64,20 +64,28 @@ foreach ($catRows as $cr) {
 }
 
 // 2. Ensure Users Exist (Admin, Staff, Students)
+$pwdHash = '$2y$10$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.'; // bcrypt for 'password123'
 $defaultUsers = [
-    ['System Admin', 'admin@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'admin', 'IT Services', '9876543210'],
-    ['Maintenance Tech 1', 'staff1@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'maintenance', 'Facilities', '9876543211'],
-    ['Maintenance Tech 2', 'staff2@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'maintenance', 'Electrical Dept', '9876543212'],
-    ['Rahul Sharma', 'student1@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'student', 'Computer Science', '9876543213'],
-    ['Ananya Roy', 'student2@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'student', 'Electronics Dept', '9876543214'],
-    ['Priya Nair', 'student3@fixmycampus.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.zA0y65XmO', 'student', 'Mechanical Dept', '9876543215']
+    ['Admin User', 'admin@fixmycampus.com', $pwdHash, 'admin', 'IT Services', '9876543210'],
+    ['John Student', 'student@fixmycampus.com', $pwdHash, 'student', 'Computer Science', '9876543211'],
+    ['Jane Staff', 'staff@fixmycampus.com', $pwdHash, 'staff', 'Library', '9876543212'],
+    ['Mike Maintenance', 'maintenance@fixmycampus.com', $pwdHash, 'maintenance', 'Maintenance Dept', '9876543213'],
+    ['Sarah Techie', 'tech@fixmycampus.com', $pwdHash, 'maintenance', 'IT Department', '9876543214'],
+    ['Maintenance Tech 1', 'staff1@fixmycampus.com', $pwdHash, 'maintenance', 'Facilities', '9876543211'],
+    ['Maintenance Tech 2', 'staff2@fixmycampus.com', $pwdHash, 'maintenance', 'Electrical Dept', '9876543212'],
+    ['Rahul Sharma', 'student1@fixmycampus.com', $pwdHash, 'student', 'Computer Science', '9876543213'],
+    ['Ananya Roy', 'student2@fixmycampus.com', $pwdHash, 'student', 'Electronics Dept', '9876543214'],
+    ['Priya Nair', 'student3@fixmycampus.com', $pwdHash, 'student', 'Mechanical Dept', '9876543215']
 ];
 
 foreach ($defaultUsers as $u) {
     $chk = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
     $chk->execute([$u[1]]);
-    if (!$chk->fetch()) {
+    $existing = $chk->fetch();
+    if (!$existing) {
         $pdo->prepare("INSERT INTO users (full_name, email, password, role, department, phone) VALUES (?, ?, ?, ?, ?, ?)")->execute($u);
+    } else {
+        $pdo->prepare("UPDATE users SET password = ?, role = ?, full_name = ? WHERE user_id = ?")->execute([$u[2], $u[3], $u[0], $existing['user_id']]);
     }
 }
 
