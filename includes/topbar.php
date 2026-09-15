@@ -72,17 +72,36 @@ $currentFile=basename($_SERVER['PHP_SELF']);
         <div class="notif-foot"><a href="<?=$notifUrl?>">View all</a></div>
       </div>
     </div>
-    <div class="topbar-user">
-      <div class="user-avatar-sm"><?=strtoupper(substr($u['name'],0,1))?></div>
-      <div class="d-sm-block">
-        <div class="topbar-user-name"><?=htmlspecialchars(explode(' ',$u['name'])[0])?></div>
-        <div class="topbar-user-role"><?=$role?></div>
+    <div class="user-menu-wrapper">
+      <button type="button" class="topbar-user-btn" id="userMenuBtn" onclick="toggleUserMenu()" aria-expanded="false" aria-label="User account menu">
+        <div class="user-avatar-sm"><?=strtoupper(substr($u['name'],0,1))?></div>
+        <div class="d-sm-block">
+          <div class="topbar-user-name">
+            <span><?=htmlspecialchars(explode(' ',$u['name'])[0])?></span>
+            <i class="bi bi-chevron-down u-chevron"></i>
+          </div>
+          <div class="topbar-user-role"><?=$role?></div>
+        </div>
+      </button>
+
+      <div class="user-dropdown-menu" id="userDropdownMenu">
+        <div class="ud-header">
+          <div class="ud-avatar"><?=strtoupper(substr($u['name'],0,1))?></div>
+          <div class="ud-info">
+            <div class="ud-name"><?=htmlspecialchars($u['name'])?></div>
+            <div class="ud-email"><?=htmlspecialchars($u['email'] ?? '')?></div>
+            <span class="ud-role-badge"><?=htmlspecialchars(ucfirst($role))?></span>
+          </div>
+        </div>
+        <div class="ud-divider"></div>
+        <div class="ud-links">
+          <a href="<?=$base?>logout.php" class="ud-item ud-logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Logout</span>
+          </a>
+        </div>
       </div>
     </div>
-    <a href="<?=$base?>logout.php" class="topbar-logout-btn" title="Sign out" aria-label="Sign out">
-      <i class="bi bi-box-arrow-right"></i>
-      <span class="logout-text">Logout</span>
-    </a>
   </div>
 </header>
 <div class="search-modal" id="searchModal" onclick="closeSearchOnBg(event)">
@@ -98,8 +117,29 @@ $currentFile=basename($_SERVER['PHP_SELF']);
   </div>
 </div>
 <script>
-function toggleNotif(){document.getElementById('notifDropdown').classList.toggle('show');}
-document.addEventListener('click',function(e){if(!e.target.closest('#notifBtn')&&!e.target.closest('#notifDropdown'))document.getElementById('notifDropdown')?.classList.remove('show');});
+function toggleNotif(){
+  document.getElementById('notifDropdown').classList.toggle('show');
+  document.getElementById('userDropdownMenu')?.classList.remove('show');
+}
+function toggleUserMenu(){
+  const dd = document.getElementById('userDropdownMenu');
+  const btn = document.getElementById('userMenuBtn');
+  const isOpen = dd.classList.toggle('show');
+  btn.setAttribute('aria-expanded', isOpen);
+  document.getElementById('notifDropdown')?.classList.remove('show');
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#notifBtn')&&!e.target.closest('#notifDropdown')){
+    document.getElementById('notifDropdown')?.classList.remove('show');
+  }
+  if(!e.target.closest('#userMenuBtn')&&!e.target.closest('#userDropdownMenu')){
+    const dd = document.getElementById('userDropdownMenu');
+    if(dd && dd.classList.contains('show')){
+      dd.classList.remove('show');
+      document.getElementById('userMenuBtn')?.setAttribute('aria-expanded', 'false');
+    }
+  }
+});
 function openSearch(){document.getElementById('searchModal').classList.add('open');setTimeout(()=>document.getElementById('searchInput').focus(),50);}
 function closeSearch(){document.getElementById('searchModal').classList.remove('open');}
 function closeSearchOnBg(e){if(e.target===document.getElementById('searchModal'))closeSearch();}

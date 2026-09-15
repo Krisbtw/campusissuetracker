@@ -66,17 +66,28 @@ $portalTag = $isAdmin ? 'Admin Console' : ($isMaint ? 'Maintenance Team' : 'Camp
   </div>
 
   <div class="sidebar-footer">
-    <div class="sf-user">
-      <div class="user-avatar-sm"><?=$initials?></div>
-      <div class="sf-info">
-        <div class="sf-name"><?=htmlspecialchars($u['name'])?></div>
-        <div class="sf-role"><?=htmlspecialchars(ucfirst($u['role']))?></div>
+    <div class="sf-user-wrapper">
+      <button type="button" class="sf-user-btn" id="sfUserBtn" onclick="toggleSfUserMenu()" aria-expanded="false" aria-label="User account menu">
+        <div class="user-avatar-sm"><?=$initials?></div>
+        <div class="sf-info">
+          <div class="sf-name"><?=htmlspecialchars($u['name'])?></div>
+          <div class="sf-role"><?=htmlspecialchars(ucfirst($u['role']))?></div>
+        </div>
+        <i class="bi bi-chevron-up sf-chevron"></i>
+      </button>
+
+      <div class="sf-dropdown-menu" id="sfDropdownMenu">
+        <div class="sf-dd-header">
+          <div class="sf-dd-name"><?=htmlspecialchars($u['name'])?></div>
+          <div class="sf-dd-email"><?=htmlspecialchars($u['email'] ?? '')?></div>
+        </div>
+        <div class="sf-dd-divider"></div>
+        <a href="<?=$base?>logout.php" class="sf-dd-logout">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Logout</span>
+        </a>
       </div>
     </div>
-    <a href="<?=$base?>logout.php" class="sidebar-logout-btn" title="Sign out" aria-label="Log out">
-      <i class="bi bi-box-arrow-right"></i>
-      <span>Logout</span>
-    </a>
   </div>
 </aside>
 <script>
@@ -88,4 +99,19 @@ function closeSidebar(){
   document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('sidebarOverlay')?.classList.remove('open');
 }
+function toggleSfUserMenu(){
+  const dd = document.getElementById('sfDropdownMenu');
+  const btn = document.getElementById('sfUserBtn');
+  const isOpen = dd.classList.toggle('show');
+  btn.setAttribute('aria-expanded', isOpen);
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#sfUserBtn')&&!e.target.closest('#sfDropdownMenu')){
+    const dd = document.getElementById('sfDropdownMenu');
+    if(dd && dd.classList.contains('show')){
+      dd.classList.remove('show');
+      document.getElementById('sfUserBtn')?.setAttribute('aria-expanded', 'false');
+    }
+  }
+});
 </script>
