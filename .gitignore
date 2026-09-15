@@ -1,0 +1,7 @@
+.env
+.vscode/
+uploads/issues/*
+!uploads/issues/.gitkeep
+
+.vercel
+.env*

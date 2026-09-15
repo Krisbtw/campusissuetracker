@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* FixMyCampus design tokens.
+   Source palette is unchanged; values are mapped to roles. */
+:root {
+  --burg: #4A0E17;
+  --burg2: #7B1E2B;
+  --burg3: #5E1120;
+  --tan: #bfaf9c;
+  --cream: #EAE0D3;
+  --cream2: #F5EDE3;
+  --peach: #FFD8BE;
+  --peach2: #FBC49E;
+  --peach-dim: rgba(255, 216, 190, .55);
+  --peach-dimmer: rgba(255, 216, 190, .3);
+  --form-bg: #f8f6f0;
+  --form-border: #d4c8b8;
+  --form-text: #2b0d0d;
+  --form-placeholder: #8a7575;
+  --amber: #92400e;
+  --emerald: #047857;
+  --rose: #9f1239;
+  --blue: #7B1E2B;
+
+  --bg: #FAF8F5;
+  --bg-body: var(--bg);
+  --bg-app: var(--bg);
+  --surface: #FFFFFF;
+  --bg-raised: var(--surface);
+  --surface-muted: var(--cream2);
+  --border: var(--form-border);
+  --border-color: var(--form-border);
+  --border-sub: var(--form-border);
+  --text: var(--form-text);
+  --text-primary: var(--form-text);
+  --text-dark: var(--form-text);
+  --text-muted: #5C5148;
+  --text-dim: var(--text-muted);
+  --primary: var(--burg);
+  --primary-hover: var(--burg2);
+  --on-primary: var(--cream2);
+
+  --status-pending: #6B635C;
+  --status-progress: var(--amber);
+  --status-resolved: var(--emerald);
+  --status-closed: #5C5148;
+  --status-rejected: var(--rose);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --fs-sm: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 28px;
+
+  --r: 8px;
+  --r-sm: 6px;
+  --radius: var(--r);
+  --control-h: 44px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --g: 16px;
+  --sidebar-w: 240px;
+  --nav-h: 56px;
+  --page-max: 1200px;
+}
