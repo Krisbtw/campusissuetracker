@@ -35,6 +35,7 @@ $error_get=htmlspecialchars($_GET['error']??'');
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FixMyCampus — Sign In</title>
 <meta name="description" content="Sign in to FixMyCampus.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/auth.css">
 </head>
@@ -58,7 +59,9 @@ $error_get=htmlspecialchars($_GET['error']??'');
           <label class="llabel" for="lpwd">Password</label>
           <div class="lwrap">
             <input type="password" id="lpwd" name="password" class="linput" placeholder="Enter your password" required autocomplete="current-password">
-            <button type="button" class="leye" id="eyeBtn" aria-label="Toggle password visibility">Show</button>
+            <button type="button" class="leye" id="eyeBtn" aria-label="Toggle password visibility" title="Toggle password visibility">
+              <i class="bi bi-eye" id="eyeIcon"></i>
+            </button>
           </div>
         </div>
         <button type="submit" class="lbtn" id="sbtn">Sign in</button>
@@ -83,8 +86,13 @@ $error_get=htmlspecialchars($_GET['error']??'');
   </section>
 </main>
 <script>
-const pwd=document.getElementById('lpwd'),eyeBtn=document.getElementById('eyeBtn');
-eyeBtn.addEventListener('click',()=>{const h=pwd.type==='password';pwd.type=h?'text':'password';eyeBtn.textContent=h?'Hide':'Show';});
+const pwd=document.getElementById('lpwd'),eyeBtn=document.getElementById('eyeBtn'),eyeIcon=document.getElementById('eyeIcon');
+eyeBtn.addEventListener('click',()=>{
+  const isHidden=pwd.type==='password';
+  pwd.type=isHidden?'text':'password';
+  eyeIcon.className=isHidden?'bi bi-eye-slash':'bi bi-eye';
+  eyeBtn.setAttribute('aria-label',isHidden?'Hide password':'Show password');
+});
 document.getElementById('lf').addEventListener('submit',()=>{const b=document.getElementById('sbtn');b.disabled=true;b.textContent='Signing in…';});
 document.querySelectorAll('.demo-chip').forEach(btn=>{
   btn.addEventListener('click',()=>{
