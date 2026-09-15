@@ -13,8 +13,11 @@ $search         = trim($_GET['search'] ?? '');
 $where = ["i.assigned_to = ?"];
 $params = [$u['id']];
 if ($statusFilter)   { $where[] = "i.status=?";   $params[] = $statusFilter; }
-if ($priorityFilter) { $where[] = "i.priority=?"; $params[] = $priorityFilter; }
-if ($search)         { $where[] = "(i.title LIKE ? OR i.location LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
+if ($search) {
+    $searchLower = '%' . mb_strtolower($search, 'UTF-8') . '%';
+    $where[] = "(LOWER(i.title) LIKE ? OR LOWER(i.location) LIKE ? OR LOWER(c.category_name) LIKE ? OR LOWER(u.full_name) LIKE ? OR LOWER(i.description) LIKE ?)";
+    $params[] = $searchLower; $params[] = $searchLower; $params[] = $searchLower; $params[] = $searchLower; $params[] = $searchLower;
+}
 
 $sql = "SELECT i.*,c.category_name,u.full_name AS reporter FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id LEFT JOIN users u ON i.reported_by=u.user_id WHERE ".implode(' AND ',$where)." ORDER BY CASE i.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, i.created_at DESC";
 $stmt = $pdo->prepare($sql); $stmt->execute($params); $issues=$stmt->fetchAll();

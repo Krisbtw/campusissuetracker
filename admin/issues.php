@@ -10,7 +10,11 @@ $sf=trim($_GET['status']??'');$pf=trim($_GET['priority']??'');$search=trim($_GET
 $where=['i.parent_id IS NULL'];$params=[];
 if($sf){$where[]="i.status=?";$params[]=$sf;}
 if($pf){$where[]="i.priority=?";$params[]=$pf;}
-if($search){$where[]="(i.title LIKE ? OR i.location LIKE ? OR u.full_name LIKE ?)";$params[]="%$search%";$params[]="%$search%";$params[]="%$search%";}
+if($search){
+  $searchLower = '%' . mb_strtolower($search, 'UTF-8') . '%';
+  $where[]="(LOWER(i.title) LIKE ? OR LOWER(i.location) LIKE ? OR LOWER(u.full_name) LIKE ? OR LOWER(c.category_name) LIKE ? OR LOWER(i.description) LIKE ?)";
+  $params[]=$searchLower;$params[]=$searchLower;$params[]=$searchLower;$params[]=$searchLower;$params[]=$searchLower;
+}
 $sql="SELECT i.*,c.category_name,u.full_name AS reporter FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id LEFT JOIN users u ON i.reported_by=u.user_id WHERE ".implode(' AND ',$where)." ORDER BY CASE i.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, i.created_at DESC";
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
