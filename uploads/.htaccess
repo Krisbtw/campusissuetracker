@@ -1,0 +1,5 @@
+# Prevent direct script execution in uploads
+<FilesMatch "\.(php|phtml|php3|php4|php5|phps)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>

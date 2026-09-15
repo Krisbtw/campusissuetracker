@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>@elnr.mw — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#bfaf9c;
+  --burg:#4A0E17;
+  --burg-mid:#7B1E2B;
+  --cream-dark:#C4B5A0;
+  --cream-card:#EAE0D3;
+  --cream-light:#F5F0EB;
+  --text-burg:#4A0E17;
+  --text-cream:#F5F0EB;
+  --radius:24px;
+  --gap:12px;
+}
+html,body{min-height:100vh;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text-burg)}
+img{display:block;width:100%;height:100%;object-fit:cover}
+
+/* ── NAV ── */
+.nav{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--burg);color:var(--text-cream);
+  border-radius:var(--radius);padding:14px 24px;
+  margin:12px 12px 0;gap:16px;
+}
+.nav-left,.nav-right{display:flex;align-items:center;gap:10px}
+.nav-icon{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .18s}
+.nav-icon:hover{background:rgba(255,255,255,.22)}
+.nav-icon svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav-link{font-size:.75rem;font-weight:500;color:rgba(255,255,255,.7);text-decoration:none;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);transition:all .18s;white-space:nowrap}
+.nav-link:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-handle{font-size:.82rem;font-weight:600;color:#fff;letter-spacing:.02em}
+
+/* ── BENTO GRID ── */
+.bento{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  grid-template-rows:auto;
+  gap:var(--gap);
+  padding:var(--gap) 12px 24px;
+  max-width:1280px;margin:0 auto;
+}
+
+/* card base */
+.card{border-radius:var(--radius);overflow:hidden;position:relative}
+.card-burg{background:var(--burg);color:var(--text-cream)}
+.card-cream{background:var(--cream-card);color:var(--text-burg)}
+.card-light{background:var(--cream-light);color:var(--text-burg)}
+
+/* grid placements */
+.g-hero    {grid-column:1/8;grid-row:1/3;min-height:480px}
+.g-metric  {grid-column:8/13;grid-row:1/2;min-height:160px}
+.g-insta   {grid-column:8/13;grid-row:2/3;min-height:300px}
+.g-stories {grid-column:1/8;grid-row:3/4;min-height:130px}
+.g-bio     {grid-column:8/13;grid-row:3/4;min-height:130px}
+.g-gallery {grid-column:1/13;grid-row:4/5}
+
+/* ── HERO CARD ── */
+.hero-img{position:absolute;inset:0}
+.hero-img img{object-position:top center}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(74,14,23,.15) 0%,rgba(74,14,23,.7) 100%)}
+.hero-content{position:absolute;bottom:0;left:0;right:0;padding:24px}
+.hero-name{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;color:#fff;line-height:1.1;margin-bottom:6px}
+.hero-tagline{font-size:.82rem;font-weight:400;color:rgba(255,255,255,.75);margin-bottom:16px;letter-spacing:.02em}
+.hero-widgets{display:flex;gap:8px;flex-wrap:wrap}
+.hw{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:6px}
+.hw-val{font-size:1rem;font-weight:700;color:#fff}
+.hw-lbl{font-size:.68rem;color:rgba(255,255,255,.7);line-height:1.2}
+.hero-badge{position:absolute;top:20px;right:20px;background:var(--cream-light);color:var(--text-burg);border-radius:20px;padding:6px 14px;font-size:.72rem;font-weight:600;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.badge-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
+
+/* ── METRICS CARD ── */
+.metric-inner{padding:22px 24px;height:100%;display:flex;align-items:center;gap:0}
+.metric-block{flex:1;text-align:center;padding:0 12px}
+.metric-block+.metric-block{border-left:1px solid rgba(255,255,255,.15)}
+.metric-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:#fff;line-height:1}
+.metric-lbl{font-size:.7rem;color:rgba(255,255,255,.65);margin-top:4px;letter-spacing:.05em;text-transform:uppercase}
+
+/* ── INSTAGRAM CARD ── */
+.insta-inner{padding:20px;height:100%;display:flex;flex-direction:column;gap:14px}
+.insta-top{display:flex;align-items:center;gap:12px}
+.insta-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.2);flex-shrink:0}
+.insta-handle{font-size:.95rem;font-weight:700;color:#fff}
+.insta-name{font-size:.75rem;color:rgba(255,255,255,.6);margin-top:2px}
+.insta-stats{display:flex;gap:0;justify-content:space-around}
+.is-block{text-align:center}
+.is-num{font-size:1.1rem;font-weight:700;color:#fff}
+.is-lbl{font-size:.65rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.04em;margin-top:1px}
+.insta-btns{display:flex;gap:8px}
+.ibtn{flex:1;padding:8px 12px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .18s;border:none;text-align:center}
+.ibtn-primary{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.ibtn-primary:hover{background:rgba(255,255,255,.25)}
+.ibtn-secondary{background:transparent;color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15)}
+.ibtn-secondary:hover{background:rgba(255,255,255,.08)}
+.insta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden;flex:1}
+.insta-cell{aspect-ratio:1;overflow:hidden;background:var(--burg-mid)}
+.insta-cell img{transition:transform .3s}
+.insta-cell:hover img{transform:scale(1.06)}
+
+/* ── STORIES ROW ── */
+.stories-inner{padding:18px 22px;height:100%;display:flex;align-items:center;gap:14px;overflow-x:auto}
+.stories-inner::-webkit-scrollbar{display:none}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.story-ring{width:64px;height:64px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,#c97b63,#a0374c,#4A0E17);flex-shrink:0}
+.story-img{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2.5px solid var(--cream-card)}
+.story-label{font-size:.62rem;font-weight:500;color:var(--text-burg);text-align:center;max-width:64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── BIO CARD ── */
+.bio-inner{padding:22px 24px;height:100%;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.bio-tag{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--burg-mid);margin-bottom:2px}
+.bio-text{font-size:.82rem;line-height:1.7;color:var(--text-burg);text-align:justify}
+.bio-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{padding:4px 12px;border-radius:20px;border:1px solid var(--burg);font-size:.68rem;font-weight:500;color:var(--text-burg);background:transparent;transition:all .18s;cursor:default}
+.chip:hover{background:var(--burg);color:#fff}
+
+/* ── GALLERY ── */
+.gallery-inner{padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);height:340px}
+.g-cell{border-radius:var(--radius);overflow:hidden;position:relative}
+.g-cell img{transition:transform .4s ease}
+.g-cell:hover img{transform:scale(1.04)}
+.g-cell-tall{grid-row:span 1}
+.g-feature{position:relative;background:var(--burg)}
+.g-feature-img{position:absolute;inset:0}
+.g-feature-overlay{position:absolute;inset:0;background:rgba(74,14,23,.5)}
+.g-feature-circle{position:absolute;bottom:18px;right:18px;width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid var(--cream-light);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.g-caption{position:absolute;bottom:0;left:0;right:0;padding:14px 16px;background:linear-gradient(0deg,rgba(74,14,23,.85),transparent)}
+.g-caption-text{font-size:.75rem;font-weight:600;color:#fff;letter-spacing:.02em}
+.g-label{position:absolute;top:14px;left:14px;background:var(--cream-light);color:var(--text-burg);border-radius:8px;padding:4px 10px;font-size:.65rem;font-weight:600;letter-spacing:.04em}
+
+/* ── UTILITY ── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .bento{grid-template-columns:1fr 1fr;padding:var(--gap) 8px 20px}
+  .g-hero   {grid-column:1/3;grid-row:auto;min-height:380px}
+  .g-metric {grid-column:1/2;grid-row:auto}
+  .g-insta  {grid-column:2/3;grid-row:auto}
+  .g-stories{grid-column:1/3;grid-row:auto}
+  .g-bio    {grid-column:1/3;grid-row:auto}
+  .g-gallery{grid-column:1/3}
+  .gallery-inner{grid-template-columns:1fr 1fr;height:auto}
+  .g-cell{min-height:160px}
+}
+@media(max-width:560px){
+  .nav{margin:8px 8px 0;padding:11px 16px}
+  .nav-links{display:none}
+  .bento{grid-template-columns:1fr;padding:8px 8px 20px}
+  .g-hero,.g-metric,.g-insta,.g-stories,.g-bio,.g-gallery{grid-column:1/2;grid-row:auto}
+  .g-hero{min-height:320px}
+  .g-metric{min-height:120px}
+  .gallery-inner{grid-template-columns:1fr 1fr;height:auto}
+  .g-cell{min-height:140px}
+  .hero-name{font-size:1.7rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ════ NAV ════ -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav-left">
+    <button class="nav-icon" aria-label="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </button>
+    <span class="nav-handle">@elnr.mw</span>
+  </div>
+  <div class="nav-links" aria-label="Social links">
+    <a href="#" class="nav-link">Instagram</a>
+    <a href="#" class="nav-link">TikTok</a>
+    <a href="#" class="nav-link">Pinterest</a>
+    <a href="#" class="nav-link">Behance</a>
+    <a href="#" class="nav-link">Contact</a>
+  </div>
+  <div class="nav-right">
+    <button class="nav-icon" aria-label="Search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ════ BENTO GRID ════ -->
+<main class="bento" role="main">
+
+  <!-- 1. HERO CARD -->
+  <div class="card card-burg g-hero" role="img" aria-label="Profile hero">
+    <div class="hero-img">
+      <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=900&q=80&fit=crop&crop=top" alt="Profile portrait of Elnr">
+    </div>
+    <div class="hero-overlay"></div>
+
+    <!-- Live badge -->
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Available for work
+    </div>
+
+    <!-- Bottom content -->
+    <div class="hero-content">
+      <div class="hero-name">Eleanor<br>Mireille</div>
+      <div class="hero-tagline">Visual Artist · Photographer · Creative Director — Paris, FR</div>
+      <div class="hero-widgets">
+        <div class="hw">
+          <div>
+            <div class="hw-val">4.2K</div>
+            <div class="hw-lbl">Followers</div>
+          </div>
+        </div>
+        <div class="hw">
+          <div>
+            <div class="hw-val">218</div>
+            <div class="hw-lbl">Posts</div>
+          </div>
+        </div>
+        <div class="hw">
+          <div>
+            <div class="hw-val">96K</div>
+            <div class="hw-lbl">Likes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. METRICS WIDGET -->
+  <div class="card card-burg g-metric">
+    <div class="metric-inner">
+      <div class="metric-block">
+        <div class="metric-num">96K</div>
+        <div class="metric-lbl">Total Likes</div>
+      </div>
+      <div class="metric-block">
+        <div class="metric-num">218</div>
+        <div class="metric-lbl">Works</div>
+      </div>
+      <div class="metric-block">
+        <div class="metric-num">12</div>
+        <div class="metric-lbl">Awards</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. INSTAGRAM-STYLE PROFILE WIDGET -->
+  <div class="card card-burg g-insta">
+    <div class="insta-inner">
+      <div class="insta-top">
+        <div class="insta-avatar">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80&fit=crop&crop=face" alt="@elnr.mw avatar">
+        </div>
+        <div>
+          <div class="insta-handle">@elnr.mw</div>
+          <div class="insta-name">Eleanor Mireille</div>
+        </div>
+      </div>
+
+      <div class="insta-stats">
+        <div class="is-block"><div class="is-num">218</div><div class="is-lbl">Posts</div></div>
+        <div class="is-block"><div class="is-num">4.2K</div><div class="is-lbl">Followers</div></div>
+        <div class="is-block"><div class="is-num">512</div><div class="is-lbl">Following</div></div>
+      </div>
+
+      <div class="insta-btns">
+        <button class="ibtn ibtn-primary">Edit profile</button>
+        <button class="ibtn ibtn-secondary">Share profile</button>
+      </div>
+
+      <div class="insta-grid">
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=200&q=80&fit=crop" alt="Gallery 1" loading="lazy"></div>
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&q=80&fit=crop" alt="Gallery 2" loading="lazy"></div>
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=200&q=80&fit=crop" alt="Gallery 3" loading="lazy"></div>
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=200&q=80&fit=crop" alt="Gallery 4" loading="lazy"></div>
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80&fit=crop" alt="Gallery 5" loading="lazy"></div>
+        <div class="insta-cell"><img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&q=80&fit=crop" alt="Gallery 6" loading="lazy"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. STORY HIGHLIGHTS ROW -->
+  <div class="card card-cream g-stories">
+    <div class="stories-inner">
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=140&q=80&fit=crop&crop=center" alt="Story: Travel" loading="lazy"></div></div>
+        <span class="story-label">Travel</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=140&q=80&fit=crop&crop=faces" alt="Story: Portraits" loading="lazy"></div></div>
+        <span class="story-label">Portraits</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=140&q=80&fit=crop&crop=top" alt="Story: Editorial" loading="lazy"></div></div>
+        <span class="story-label">Editorial</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=140&q=80&fit=crop" alt="Story: Studio" loading="lazy"></div></div>
+        <span class="story-label">Studio</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=140&q=80&fit=crop&crop=top" alt="Story: Film" loading="lazy"></div></div>
+        <span class="story-label">Film</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><div class="story-img"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=140&q=80&fit=crop&crop=faces" alt="Story: BTS" loading="lazy"></div></div>
+        <span class="story-label">BTS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. BIO TEXT CARD -->
+  <div class="card card-light g-bio">
+    <div class="bio-inner">
+      <div class="bio-tag">About me</div>
+      <p class="bio-text">
+        Visual storyteller based in Paris. I create editorial and fine-art photography that bridges raw emotion with elegant composition. Open to collaborations, commissions, and exhibitions worldwide.
+      </p>
+      <div class="bio-chips">
+        <span class="chip">Photography</span>
+        <span class="chip">Art Direction</span>
+        <span class="chip">Film</span>
+        <span class="chip">Paris 🇫🇷</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. GALLERY GRID -->
+  <div class="card g-gallery" style="background:transparent;overflow:visible;">
+    <div class="gallery-inner">
+
+      <!-- Tall vertical frame 1 -->
+      <div class="g-cell">
+        <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&q=80&fit=crop&crop=top" alt="Gallery: Editorial shoot" loading="lazy">
+        <div class="g-label">Editorial</div>
+        <div class="g-caption"><span class="g-caption-text">Summer Series 2024</span></div>
+      </div>
+
+      <!-- Tall vertical frame 2 -->
+      <div class="g-cell">
+        <img src="https://images.unsplash.com/photo-1488716820095-cbe80883c496?w=600&q=80&fit=crop&crop=center" alt="Gallery: Portrait" loading="lazy">
+        <div class="g-label">Portrait</div>
+        <div class="g-caption"><span class="g-caption-text">Golden Hour</span></div>
+      </div>
+
+      <!-- Feature square with circular inset -->
+      <div class="g-cell g-feature">
+        <div class="g-feature-img">
+          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&q=80&fit=crop" alt="Gallery: Studio feature" loading="lazy">
+        </div>
+        <div class="g-feature-overlay"></div>
+        <div class="g-label">Studio</div>
+        <div class="g-caption"><span class="g-caption-text">Concept Shoot</span></div>
+        <div class="g-feature-circle">
+          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&q=80&fit=crop&crop=face" alt="Profile circle inset" loading="lazy">
+        </div>
+      </div>
+
+      <!-- Tall vertical frame 3 -->
+      <div class="g-cell">
+        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80&fit=crop&crop=top" alt="Gallery: Film portrait" loading="lazy">
+        <div class="g-label">Film</div>
+        <div class="g-caption"><span class="g-caption-text">Analog Chronicles</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+// Smooth hover tilt on hero card
+const hero = document.querySelector('.g-hero');
+if(hero && window.innerWidth > 900) {
+  hero.addEventListener('mousemove', e => {
+    const r = hero.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width - .5) * 4;
+    const y = ((e.clientY - r.top) / r.height - .5) * -4;
+    hero.style.transform = `perspective(1000px) rotateX(${y}deg) rotateY(${x}deg)`;
+  });
+  hero.addEventListener('mouseleave', () => {
+    hero.style.transform = '';
+    hero.style.transition = 'transform .5s ease';
+    setTimeout(() => hero.style.transition = '', 500);
+  });
+}
+
+// Staggered card entrance animation
+const cards = document.querySelectorAll('.card');
+const io = new IntersectionObserver(entries => {
+  entries.forEach((e,i) => {
+    if(e.isIntersecting){
+      e.target.style.animation = `fadeUp .45s ${i * 0.04}s ease forwards`;
+      io.unobserve(e.target);
+    }
+  });
+}, {threshold: 0.05});
+cards.forEach(c => {
+  c.style.opacity = '0';
+  c.style.transform = 'translateY(18px)';
+  io.observe(c);
+});
+
+const style = document.createElement('style');
+style.textContent = `@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

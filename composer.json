@@ -1,0 +1,8 @@
+{
+  "name": "fixmycampus/campus-issue-tracker",
+  "description": "Campus Issue Tracker (FixMyCampus)",
+  "type": "project",
+  "require": {
+    "php": ">=8.1"
+  }
+}
