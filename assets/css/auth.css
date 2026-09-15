@@ -59,7 +59,12 @@
   font-weight: 500;
 }
 .auth-page .lwrap,
-.auth-page .auth-password-wrap { position: relative; display: flex; align-items: center; }
+.auth-page .auth-password-wrap { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  width: 100%;
+}
 .auth-page .licon { display: none; }
 .auth-page .linput,
 .auth-page .form-control,
@@ -74,7 +79,10 @@
   color: var(--form-text);
   font-size: 16px;
 }
-.auth-page .linput { padding-right: 44px; }
+.auth-page .linput,
+.auth-page .auth-password-wrap .form-control { 
+  padding-right: 44px; 
+}
 .auth-page .linput::placeholder,
 .auth-page .form-control::placeholder { color: var(--form-placeholder); }
 .auth-page .linput:focus,
@@ -86,18 +94,33 @@
 .auth-page .leye,
 .auth-page .eye-toggle-btn {
   position: absolute;
-  right: 0;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border: 0;
   background: transparent;
   color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  padding: 0;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 .auth-page .leye:hover,
-.auth-page .eye-toggle-btn:hover { color: var(--text); }
+.auth-page .eye-toggle-btn:hover { 
+  color: var(--burg); 
+  background: rgba(74, 14, 23, 0.06);
+}
+.auth-page .leye:focus-visible,
+.auth-page .eye-toggle-btn:focus-visible {
+  outline: 2px solid var(--burg2);
+  outline-offset: 1px;
+}
 .auth-page .ldiv,
 .auth-page .auth-divider {
   height: 1px;
