@@ -2,10 +2,12 @@
 session_start();
 require_once 'config/db.php';
 require_once 'includes/auth_check.php';
+require_once 'includes/notification_helper.php';
 
 if (isLoggedIn()) { redirectToDashboard(); }
 
 $error = $success = '';
+$isStaffPending = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name       = trim($_POST['full_name'] ?? '');
@@ -33,9 +35,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'An account with this email already exists.';
         } else {
             $hashed = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role, department, phone) VALUES (?,?,?,?,?,?)");
-            $stmt->execute([$name, $email, $hashed, $role, $department, $phone]);
-            $success = 'Account created successfully! You can now sign in.';
+            $status = ($role === 'staff') ? 'pending' : 'active';
+            $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role, department, phone, status) VALUES (?,?,?,?,?,?,?)");
+            $stmt->execute([$name, $email, $hashed, $role, $department, $phone, $status]);
+
+            if ($role === 'staff') {
+                $isStaffPending = true;
+                $success = 'Staff registration submitted! Your account is awaiting administrator verification. You will be able to sign in once an administrator approves your account.';
+                // Notify all administrators
+                $admins = $pdo->query("SELECT user_id FROM users WHERE role = 'admin'")->fetchAll();
+                foreach ($admins as $adm) {
+                    sendNotification($pdo, $adm['user_id'], null, "New Staff Registration: {$name} ({$department}) registered for staff access and is awaiting your verification.", 'warning');
+                }
+            } else {
+                $success = 'Account created successfully! You can now sign in.';
+            }
         }
     }
 }
@@ -61,8 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="alert-banner alert-danger" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     <?php if ($success): ?>
-      <div class="alert-banner alert-success" role="alert"><?= htmlspecialchars($success) ?>
-        <a href="index.php" class="auth-link">Sign in</a>
+      <div class="alert-banner alert-<?= !empty($isStaffPending) ? 'warning' : 'success' ?>" role="alert">
+        <div><?= htmlspecialchars($success) ?></div>
+        <div style="margin-top:8px;">
+          <a href="index.php" class="auth-link"><i class="bi bi-arrow-left me-1"></i>Go to Sign in</a>
+        </div>
       </div>
     <?php endif; ?>
 
@@ -78,10 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="row">
         <div class="col-md-6">
           <label class="form-label" for="role">Role *</label>
-          <select id="role" name="role" class="form-control">
+          <select id="role" name="role" class="form-control" onchange="toggleStaffNotice(this.value)">
             <option value="student" <?= ($_POST['role']??'student')==='student'?'selected':'' ?>>Student</option>
             <option value="staff"   <?= ($_POST['role']??'')==='staff'?'selected':'' ?>>Staff</option>
           </select>
+          <div id="staffNotice" style="display:<?= ($_POST['role']??'')==='staff'?'block':'none' ?>;margin-top:6px;font-size:12px;color:var(--amber);line-height:1.4;">
+            <i class="bi bi-shield-lock me-1"></i>Staff accounts require admin verification before login.
+          </div>
         </div>
         <div class="col-md-6">
           <label class="form-label" for="department">Department *</label>
@@ -123,6 +143,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </main>
 <script>
+function toggleStaffNotice(val) {
+  const notice = document.getElementById('staffNotice');
+  if (notice) notice.style.display = (val === 'staff') ? 'block' : 'none';
+}
+
 document.querySelectorAll('.eye-toggle-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.preventDefault();

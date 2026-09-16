@@ -15,10 +15,17 @@ $reporterMenu = [
   ['icon' => 'bi-bell-fill', 'label' => 'Notifications', 'href' => $base . 'reporter/notifications.php', 'badge' => $unread],
 ];
 
+$pendingStaffCount = 0;
+if ($isAdmin) {
+    try {
+        $pendingStaffCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='staff' AND status='pending'")->fetchColumn();
+    } catch(Exception $e) {}
+}
+
 $adminMenu = [
   ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard', 'href' => $base . 'admin/dashboard.php'],
   ['icon' => 'bi-card-checklist', 'label' => 'All Issues', 'href' => $base . 'admin/issues.php'],
-  ['icon' => 'bi-people-fill', 'label' => 'Users', 'href' => $base . 'admin/users.php'],
+  ['icon' => 'bi-people-fill', 'label' => 'Users', 'href' => $base . 'admin/users.php', 'badge' => $pendingStaffCount],
   ['icon' => 'bi-bar-chart-fill', 'label' => 'Reports', 'href' => $base . 'admin/reports.php'],
   ['icon' => 'bi-bell-fill', 'label' => 'Notifications', 'href' => $base . 'admin/notifications.php', 'badge' => $unread],
 ];

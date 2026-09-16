@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('student','staff','admin','maintenance') NOT NULL DEFAULT 'student',
+    status ENUM('active','pending','rejected') NOT NULL DEFAULT 'active',
     department VARCHAR(100) DEFAULT NULL,
     phone VARCHAR(15) DEFAULT NULL,
     avatar VARCHAR(255) DEFAULT NULL,

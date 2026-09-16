@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'student',
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
     department VARCHAR(100) DEFAULT NULL,
     phone VARCHAR(15) DEFAULT NULL,
     avatar VARCHAR(255) DEFAULT NULL,

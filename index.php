@@ -22,9 +22,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='login'){
       }
     }
     if($isValid){
-      $_SESSION['user_id']=$user['user_id'];$_SESSION['user_name']=$user['full_name'];
-      $_SESSION['user_email']=$user['email'];$_SESSION['role']=$user['role'];
-      $_SESSION['department']=$user['department'];redirectToDashboard();
+      $uStatus = $user['status'] ?? 'active';
+      if ($uStatus === 'pending') {
+        $error = 'Your staff account is pending administrator verification. Please wait for an administrator to approve your account before signing in.';
+      } elseif ($uStatus === 'rejected') {
+        $error = 'Your staff registration request was rejected by an administrator. Please contact campus administration if you believe this is an error.';
+      } else {
+        $_SESSION['user_id']=$user['user_id'];$_SESSION['user_name']=$user['full_name'];
+        $_SESSION['user_email']=$user['email'];$_SESSION['role']=$user['role'];
+        $_SESSION['department']=$user['department'];redirectToDashboard();
+      }
     }else{$error='Invalid email or password.';}
   }
 }

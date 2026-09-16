@@ -315,6 +315,24 @@ try {
         // Continue if columns exist or ALTER is restricted
     }
 
+    // Auto-migrate user status column for staff verification
+    try {
+        if ($driver === 'pgsql') {
+            $uColsStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users'");
+            $uCols = $uColsStmt ? $uColsStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+            if (!in_array('status', $uCols)) {
+                $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'");
+            }
+        } else {
+            $uCols = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('status', $uCols)) {
+                $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active' AFTER role");
+            }
+        }
+    } catch (Exception $ex) {
+        // Continue if column exists or ALTER restricted
+    }
+
 } catch (PDOException $e) {
     die(json_encode(["error" => "Database connection failed: " . $e->getMessage()]));
 }

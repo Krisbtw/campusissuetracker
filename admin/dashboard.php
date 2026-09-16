@@ -16,6 +16,7 @@ foreach (['pending','in_progress','resolved','closed','rejected'] as $s) {
 $stats['total'] = $pdo->query("SELECT COUNT(*) FROM issues WHERE parent_id IS NULL")->fetchColumn();
 $totalUsers = $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('student','staff')")->fetchColumn();
 $criticalOpen = $pdo->query("SELECT COUNT(*) FROM issues WHERE priority='critical' AND status NOT IN ('resolved','closed') AND parent_id IS NULL")->fetchColumn();
+$pendingStaffCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='staff' AND status='pending'")->fetchColumn();
 
 $recent = $pdo->query("SELECT i.*,c.category_name,u.full_name AS reporter FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id LEFT JOIN users u ON i.reported_by=u.user_id WHERE i.parent_id IS NULL ORDER BY i.created_at DESC LIMIT 7")->fetchAll();
 
@@ -74,6 +75,17 @@ $pageSubtitle = 'System overview';
         <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
         <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
       </div>
+
+      <?php if (!empty($pendingStaffCount) && $pendingStaffCount > 0): ?>
+        <div class="alert-banner alert-warning" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;background:rgba(217,119,6,0.12);border:1px solid var(--amber);color:var(--text);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <i class="bi bi-shield-exclamation" style="font-size:1.3rem;color:var(--amber);"></i>
+            <span><strong><?= $pendingStaffCount ?> staff applicant<?= $pendingStaffCount > 1 ? 's are' : ' is' ?> awaiting verification.</strong> Review and approve or reject to grant access.</span>
+          </div>
+          <a href="users.php?status=pending" class="btn btn-secondary btn-sm" style="font-weight:600;white-space:nowrap;">Review applicants →</a>
+        </div>
+      <?php endif; ?>
+
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-value"><?=$stats['total']?></div><div class="stat-label">Total issues</div></div>
         <div class="stat-card"><div class="stat-value"><?=$stats['pending']?></div><div class="stat-label">Pending</div></div>
