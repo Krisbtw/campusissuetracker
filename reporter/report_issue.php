@@ -69,12 +69,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       
       // Log status timeline on parent issue
       logStatusChange($pdo, $mergedParentId, $u['id'], '', '', "Duplicate report merged from " . $u['name'] . " (Issue #" . $issue_id . ")");
-      
-      sendNotification($pdo, $u['id'], $issue_id, "Your report has been linked to existing Parent Incident #{$mergedParentId}.", 'info');
     }
 
     $admins=$pdo->query("SELECT user_id FROM users WHERE role='admin'")->fetchAll();
-    foreach($admins as $admin){sendNotification($pdo,$admin['user_id'],$issue_id,"New issue #{$issue_id} submitted by {$u['name']}: {$title}",'warning');}
+    foreach($admins as $admin){
+      if ($mergedParentId) {
+        sendNotification($pdo, $admin['user_id'], $mergedParentId, "Duplicate report #{$issue_id} submitted by {$u['name']} was auto-merged into Parent Incident #{$mergedParentId}.", 'info');
+      } else {
+        sendNotification($pdo, $admin['user_id'], $issue_id, "New issue #{$issue_id} submitted by {$u['name']}: {$title}", 'warning');
+      }
+    }
     
     if ($mergedParentId) {
       $success="Issue #{$issue_id} submitted successfully and auto-merged into Parent Incident #{$mergedParentId}!";

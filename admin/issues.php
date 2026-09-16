@@ -30,15 +30,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       $pdo->prepare("UPDATE issues SET is_parent=1 WHERE issue_id=?")->execute([$parent_id]);
       foreach($child_ids as $cid){
         $pdo->prepare("UPDATE issues SET parent_id=? WHERE issue_id=?")->execute([$parent_id,$cid]);
-        $cStmt=$pdo->prepare("SELECT reported_by FROM issues WHERE issue_id=?");
-        $cStmt->execute([$cid]);
-        $cRow=$cStmt->fetch();
-        if($cRow){
-          sendNotification($pdo,$cRow['reported_by'],$parent_id,"Your issue #$cid has been merged into Parent Incident #$parent_id. Track all updates here.",'info');
-        }
       }
       $pdo->prepare("UPDATE issues SET affected_count = (SELECT COUNT(*) + 1 FROM issues WHERE parent_id = ?) WHERE issue_id = ?")->execute([$parent_id,$parent_id]);
       logStatusChange($pdo,$parent_id,$u['id'],'','',"Merged ".count($child_ids)." duplicate report(s) into this incident.");
+
+      // Notify Administrators only
+      $admins = $pdo->query("SELECT user_id FROM users WHERE role='admin'")->fetchAll();
+      foreach($admins as $admin){
+        sendNotification($pdo, $admin['user_id'], $parent_id, "Merged issue(s) #" . implode(', #', $child_ids) . " into Parent Incident #{$parent_id}.", 'info');
+      }
       $msg="Successfully merged ".count($child_ids)." issue(s) into Parent Incident #{$parent_id}.";
     } else {
       $err="Please select at least 2 issues to perform a merge.";
