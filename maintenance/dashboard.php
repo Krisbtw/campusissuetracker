@@ -5,10 +5,10 @@ require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
 requireRole('maintenance');
 $u=currentUser();
-$stA=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=?");$stA->execute([$u['id']]);$assigned=$stA->fetchColumn();
-$stP=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=? AND status='in_progress'");$stP->execute([$u['id']]);$inprog=$stP->fetchColumn();
-$stD=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=? AND status='resolved'");$stD->execute([$u['id']]);$done=$stD->fetchColumn();
-$myIssues=$pdo->prepare("SELECT i.*,c.category_name,u.full_name AS reporter FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id LEFT JOIN users u ON i.reported_by=u.user_id WHERE i.assigned_to=? ORDER BY CASE i.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, i.created_at DESC LIMIT 8");
+$stA=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=? AND parent_id IS NULL");$stA->execute([$u['id']]);$assigned=$stA->fetchColumn();
+$stP=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=? AND status='in_progress' AND parent_id IS NULL");$stP->execute([$u['id']]);$inprog=$stP->fetchColumn();
+$stD=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE assigned_to=? AND status='resolved' AND parent_id IS NULL");$stD->execute([$u['id']]);$done=$stD->fetchColumn();
+$myIssues=$pdo->prepare("SELECT i.*,c.category_name,u.full_name AS reporter FROM issues i LEFT JOIN categories c ON i.category_id=c.category_id LEFT JOIN users u ON i.reported_by=u.user_id WHERE i.assigned_to=? AND i.parent_id IS NULL ORDER BY CASE i.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, i.created_at DESC LIMIT 8");
 $myIssues->execute([$u['id']]);$assignments=$myIssues->fetchAll();
 $unread=getUnreadCount($pdo,$u['id']);
 $pageTitle='Dashboard';$pageSubtitle='Your active assignments';
@@ -47,7 +47,12 @@ $pageTitle='Dashboard';$pageSubtitle='Your active assignments';
               <?php foreach($assignments as $iss):?>
               <tr>
                 <td><span class="issue-id">#<?=$iss['issue_id']?></span></td>
-                <td class="issue-title"><?=htmlspecialchars($iss['title'])?></td>
+                <td class="issue-title">
+                  <?=htmlspecialchars($iss['title'])?>
+                  <?php if(!empty($iss['is_parent'])): ?>
+                    <span class="badge badge-amber" style="margin-left:6px;font-size:11px;"><i class="bi bi-collection me-1"></i>Cluster (<?=$iss['affected_count']?>)</span>
+                  <?php endif; ?>
+                </td>
                 <td class="text-muted"><?=htmlspecialchars($iss['category_name']??'—')?></td>
                 <td class="text-muted"><?=htmlspecialchars($iss['location']??'—')?></td>
                 <td><?=getStatusBadge($iss['status'])?></td>

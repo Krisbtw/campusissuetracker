@@ -28,8 +28,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       $child_ids=array_slice($selected,1);
 
       $pdo->prepare("UPDATE issues SET is_parent=1 WHERE issue_id=?")->execute([$parent_id]);
+      
+      // Inherit parent's assigned technician and status to child issues
+      $pInfoStmt = $pdo->prepare("SELECT assigned_to, status FROM issues WHERE issue_id = ?");
+      $pInfoStmt->execute([$parent_id]);
+      $pInfo = $pInfoStmt->fetch();
+      $parentAssigned = $pInfo['assigned_to'] ?? null;
+      $parentStatus = $pInfo['status'] ?? 'pending';
+
       foreach($child_ids as $cid){
-        $pdo->prepare("UPDATE issues SET parent_id=? WHERE issue_id=?")->execute([$parent_id,$cid]);
+        $pdo->prepare("UPDATE issues SET parent_id=?, assigned_to=?, status=? WHERE issue_id=?")->execute([$parent_id, $parentAssigned, $parentStatus, $cid]);
       }
       $pdo->prepare("UPDATE issues SET affected_count = (SELECT COUNT(*) + 1 FROM issues WHERE parent_id = ?) WHERE issue_id = ?")->execute([$parent_id,$parent_id]);
       logStatusChange($pdo,$parent_id,$u['id'],'','',"Merged ".count($child_ids)." duplicate report(s) into this incident.");

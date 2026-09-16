@@ -10,7 +10,7 @@ $statusFilter   = $_GET['status']   ?? '';
 $priorityFilter = $_GET['priority'] ?? '';
 $search         = trim($_GET['search'] ?? '');
 
-$where = ["i.assigned_to = ?"];
+$where = ["i.assigned_to = ?", "i.parent_id IS NULL"];
 $params = [$u['id']];
 if ($statusFilter)   { $where[] = "i.status=?";   $params[] = $statusFilter; }
 if ($search) {
@@ -68,7 +68,12 @@ $pageTitle='My Assignments'; $pageSubtitle='Issues assigned to you';
             <?php foreach($issues as $iss): ?>
             <tr>
               <td><span class="issue-id">#<?= $iss['issue_id'] ?></span></td>
-              <td class="issue-title"><?= htmlspecialchars($iss['title']) ?></td>
+              <td class="issue-title">
+                <?= htmlspecialchars($iss['title']) ?>
+                <?php if (!empty($iss['is_parent'])): ?>
+                  <span class="badge badge-amber" style="margin-left:6px;font-size:11px;"><i class="bi bi-collection me-1"></i>Cluster (<?= $iss['affected_count'] ?> reports)</span>
+                <?php endif; ?>
+              </td>
               <td class="text-muted"><?= htmlspecialchars($iss['category_name']??'N/A') ?></td>
               <td class="text-muted"><?= htmlspecialchars($iss['location']) ?></td>
               <td class="text-muted"><?= htmlspecialchars($iss['reporter']) ?></td>
