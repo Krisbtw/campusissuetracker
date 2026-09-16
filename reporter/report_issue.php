@@ -183,12 +183,20 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
                 <span id="imgCountBadge" class="badge badge-subtle" style="display:none;font-weight:600;"></span>
               </div>
               <div class="panel-body">
-                <button type="button" class="upload-zone" id="uploadZone">
-                  <i class="bi bi-cloud-upload"></i>
-                  <p style="font-weight:500;margin-bottom:2px;">Click to upload or drag &amp; drop images</p>
-                  <p>JPG, PNG, WEBP — max 5 MB each, up to 5 images</p>
-                </button>
+                <div class="photo-upload-options">
+                  <button type="button" class="photo-option-card" id="uploadZone">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span class="option-title">Upload from device</span>
+                    <span class="option-desc">Click or drag &amp; drop images (JPG, PNG, WEBP)</span>
+                  </button>
+                  <button type="button" class="photo-option-card camera-option-card" id="btnOpenCamera" onclick="openCameraModal()">
+                    <i class="bi bi-camera-fill"></i>
+                    <span class="option-title">Open camera &amp; click photo</span>
+                    <span class="option-desc">Snap live photo from webcam or phone camera</span>
+                  </button>
+                </div>
                 <input type="file" id="imgInput" name="images[]" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
+                <input type="file" id="nativeCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleNativeCameraCapture(this)">
                 <div id="uploadAlert" class="form-help" style="display:none;color:var(--rose);margin-top:8px;font-weight:500;"></div>
                 <div id="imgPreview" class="img-preview-container" style="margin-top:12px;"></div>
               </div>
@@ -705,5 +713,229 @@ function formatFileSize(bytes) {
 }
 
 document.addEventListener('DOMContentLoaded', setupImageUpload);
+
+// Live Camera Viewfinder & Capture Logic
+let cameraStream = null;
+let currentFacingMode = 'environment'; // default to back camera
+let capturedBlob = null;
+
+async function openCameraModal() {
+  const alertEl = document.getElementById('uploadAlert');
+  if (alertEl) { alertEl.style.display = 'none'; alertEl.innerText = ''; }
+
+  if (selectedUploadFiles.length >= 5) {
+    if (alertEl) {
+      alertEl.innerText = 'Maximum 5 images allowed. Please delete one before taking another photo.';
+      alertEl.style.display = 'block';
+    } else {
+      alert('Maximum 5 images allowed.');
+    }
+    return;
+  }
+
+  const modal = document.getElementById('cameraModal');
+  if (!modal) return;
+
+  modal.classList.add('open');
+  retakeSnapshot(); // reset viewfinder state
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // Fallback directly to native camera input on unsupported browsers
+    document.getElementById('nativeCameraInput').click();
+    closeCameraModal();
+    return;
+  }
+
+  await startCameraStream();
+}
+
+async function startCameraStream() {
+  stopCameraStream();
+
+  const video = document.getElementById('cameraVideo');
+  const btnSwitch = document.getElementById('btnSwitchFacing');
+
+  try {
+    const constraints = {
+      video: {
+        facingMode: { ideal: currentFacingMode },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    };
+
+    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = cameraStream;
+    await video.play();
+
+    // Show flip button if multiple cameras detected
+    if (navigator.mediaDevices.enumerateDevices) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      if (videoDevices.length > 1 && btnSwitch) {
+        btnSwitch.style.display = 'flex';
+      }
+    }
+  } catch (err) {
+    console.warn('Live camera error or permission denied:', err);
+    // Offer native fallback
+    const fallback = confirm('Could not access live camera preview (permissions may be blocked). Would you like to use your device\'s default camera app instead?');
+    if (fallback) {
+      document.getElementById('nativeCameraInput').click();
+    }
+    closeCameraModal();
+  }
+}
+
+function stopCameraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('cameraVideo');
+  if (video) {
+    video.srcObject = null;
+  }
+}
+
+function toggleCameraFacing() {
+  currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+  startCameraStream();
+}
+
+function takeSnapshot() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  const flash = document.getElementById('cameraFlash');
+  const guide = document.getElementById('cameraGuide');
+  const ctrlCapture = document.getElementById('cameraControlsCapture');
+  const ctrlReview = document.getElementById('cameraControlsReview');
+
+  if (!video || !canvas) return;
+
+  const w = video.videoWidth || 1280;
+  const h = video.videoHeight || 720;
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext('2d');
+  // If front camera, flip horizontally so it mirrors user perception
+  if (currentFacingMode === 'user') {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, 0, 0, w, h);
+
+  // Trigger flash visual effect
+  if (flash) {
+    flash.classList.add('flash');
+    setTimeout(() => flash.classList.remove('flash'), 150);
+  }
+
+  // Freeze & show review mode
+  video.style.display = 'none';
+  canvas.style.display = 'block';
+  if (guide) guide.style.display = 'none';
+
+  ctrlCapture.style.display = 'none';
+  ctrlReview.style.display = 'flex';
+
+  canvas.toBlob(blob => {
+    capturedBlob = blob;
+  }, 'image/jpeg', 0.92);
+}
+
+function retakeSnapshot() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  const guide = document.getElementById('cameraGuide');
+  const ctrlCapture = document.getElementById('cameraControlsCapture');
+  const ctrlReview = document.getElementById('cameraControlsReview');
+
+  capturedBlob = null;
+  if (video) video.style.display = 'block';
+  if (canvas) canvas.style.display = 'none';
+  if (guide) guide.style.display = 'block';
+
+  if (ctrlCapture) ctrlCapture.style.display = 'flex';
+  if (ctrlReview) ctrlReview.style.display = 'none';
+}
+
+function useCapturedSnapshot() {
+  if (!capturedBlob) {
+    takeSnapshot();
+  }
+
+  if (capturedBlob) {
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const fileName = `camera_photo_${timestamp}.jpg`;
+    const file = new File([capturedBlob], fileName, { type: 'image/jpeg' });
+
+    handleNewUploadFiles([file]);
+    closeCameraModal();
+  }
+}
+
+function closeCameraModal() {
+  stopCameraStream();
+  const modal = document.getElementById('cameraModal');
+  if (modal) modal.classList.remove('open');
+  retakeSnapshot();
+}
+
+function handleNativeCameraCapture(input) {
+  if (input.files && input.files.length) {
+    handleNewUploadFiles(Array.from(input.files));
+    input.value = '';
+  }
+}
+
+// Close camera on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('cameraModal');
+    if (modal && modal.classList.contains('open')) {
+      closeCameraModal();
+    }
+  }
+});
 </script>
+
+<!-- Live Camera Viewfinder Modal -->
+<div id="cameraModal" class="camera-modal-overlay">
+  <div class="camera-modal-card" role="dialog" aria-label="Camera viewfinder">
+    <div class="camera-modal-head">
+      <span><i class="bi bi-camera me-1"></i> Click photo evidence</span>
+      <button type="button" class="btn-sm-icon" onclick="closeCameraModal()" aria-label="Close camera">&times;</button>
+    </div>
+    <div class="camera-view-container">
+      <video id="cameraVideo" autoplay playsinline muted></video>
+      <canvas id="cameraCanvas" style="display:none;"></canvas>
+      <div class="camera-guide-box" id="cameraGuide"></div>
+      <div class="camera-shutter-flash" id="cameraFlash"></div>
+      <button type="button" class="camera-switch-btn" id="btnSwitchFacing" onclick="toggleCameraFacing()" title="Switch camera" style="display:none;">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>
+    </div>
+    <div class="camera-modal-foot" id="cameraControlsCapture">
+      <button type="button" class="btn btn-secondary" onclick="closeCameraModal()">Cancel</button>
+      <button type="button" class="camera-snap-btn" onclick="takeSnapshot()">
+        <i class="bi bi-camera-fill"></i> Snap Picture
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('nativeCameraInput').click(); closeCameraModal();" title="Use native phone camera">
+        <i class="bi bi-phone"></i> Device App
+      </button>
+    </div>
+    <div class="camera-modal-foot" id="cameraControlsReview" style="display:none;">
+      <button type="button" class="btn btn-secondary" onclick="retakeSnapshot()">
+        <i class="bi bi-arrow-repeat me-1"></i> Retake
+      </button>
+      <span class="muted-note" style="font-size:12px;"><i class="bi bi-eye me-1"></i>Photo preview</span>
+      <button type="button" class="btn btn-primary" onclick="useCapturedSnapshot()">
+        <i class="bi bi-check-circle-fill me-1"></i> Use photo
+      </button>
+    </div>
+  </div>
+</div>
 </body></html>
