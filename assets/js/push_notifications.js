@@ -67,7 +67,7 @@
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        window.sendDesktopNotification('FixMyCampus Alerts Active 🔔', {
+        window.sendDesktopNotification('FixMyCampus Alerts Active', {
           body: 'You will receive instant desktop notifications whenever campus issues are updated.',
           tag: 'fmc-welcome'
         });
@@ -90,7 +90,8 @@
     const banner = document.getElementById('pushPermissionBanner');
     if (banner) {
       banner.style.opacity = '0';
-      setTimeout(() => banner.remove(), 300);
+      banner.style.transform = 'translateY(8px)';
+      setTimeout(() => banner.remove(), 250);
     }
   }
 
@@ -106,49 +107,75 @@
       bottom: 24px;
       right: 24px;
       z-index: 9999;
-      background: rgba(15, 23, 42, 0.94);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #f8fafc;
-      padding: 16px 20px;
-      border-radius: 14px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      background: var(--surface, #ffffff);
+      border: 1px solid var(--border, #d4c8b8);
+      color: var(--text, #2b0d0d);
+      padding: 16px 18px;
+      border-radius: 10px;
+      box-shadow: 0 12px 30px -4px rgba(74, 14, 23, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05);
       display: flex;
-      align-items: center;
-      gap: 16px;
-      max-width: 440px;
-      animation: floatUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      align-items: flex-start;
+      gap: 14px;
+      max-width: 380px;
+      animation: pushSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       font-family: inherit;
+      transition: opacity 0.25s ease, transform 0.25s ease;
     `;
 
     banner.innerHTML = `
-      <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">
-        🔔
+      <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(74, 14, 23, 0.08); color: var(--burg, #4A0E17); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px;">
+        <i class="bi bi-bell-fill"></i>
       </div>
       <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 600; font-size: 14px; margin-bottom: 2px;">Enable Instant Notifications?</div>
-        <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">Receive instant desktop alerts when maintenance technicians update or resolve your reported issues.</div>
-        <div style="margin-top: 10px; display: flex; gap: 8px;">
-          <button id="btnEnablePush" style="background: #4f46e5; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-            Enable Notifications
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <span style="font-weight: 600; font-size: 13.5px; color: var(--text, #2b0d0d);">Enable desktop alerts</span>
+          <button id="btnDismissPushClose" aria-label="Close" style="background: none; border: none; color: var(--text-muted, #5c5148); cursor: pointer; padding: 0; font-size: 16px; line-height: 1; opacity: 0.65;">
+            <i class="bi bi-x"></i>
           </button>
-          <button id="btnDismissPush" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s;">
-            Later
+        </div>
+        <div style="font-size: 12.5px; color: var(--text-muted, #5c5148); line-height: 1.45; margin-bottom: 12px;">
+          Receive real-time browser notifications when maintenance staff update or resolve your campus tickets.
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btnEnablePush" style="background: var(--burg, #4A0E17); color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
+            Turn on alerts
+          </button>
+          <button id="btnDismissPush" style="background: transparent; color: var(--text-muted, #5c5148); border: 1px solid var(--border, #d4c8b8); padding: 6px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;">
+            Not now
           </button>
         </div>
       </div>
     `;
 
+    // Add keyframe for smooth entrance
+    if (!document.getElementById('fmcPushAnimStyle')) {
+      const style = document.createElement('style');
+      style.id = 'fmcPushAnimStyle';
+      style.textContent = `
+        @keyframes pushSlideUp {
+          from { opacity: 0; transform: translateY(12px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     document.body.appendChild(banner);
 
-    document.getElementById('btnEnablePush')?.addEventListener('click', () => {
+    const enableBtn = document.getElementById('btnEnablePush');
+    enableBtn?.addEventListener('mouseenter', () => enableBtn.style.background = 'var(--burg2, #7B1E2B)');
+    enableBtn?.addEventListener('mouseleave', () => enableBtn.style.background = 'var(--burg, #4A0E17)');
+    enableBtn?.addEventListener('click', () => {
       window.requestPushPermission();
     });
 
-    document.getElementById('btnDismissPush')?.addEventListener('click', () => {
+    const dismissFn = () => {
       sessionStorage.setItem('fmc_push_banner_dismissed', 'true');
       hidePushBanner();
-    });
+    };
+
+    document.getElementById('btnDismissPush')?.addEventListener('click', dismissFn);
+    document.getElementById('btnDismissPushClose')?.addEventListener('click', dismissFn);
   }
 
   // Periodic polling for notifications
