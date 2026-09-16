@@ -179,6 +179,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
                 <div class="field-group"><label class="form-label" for="title">Issue title *</label><input type="text" id="title" name="title" class="form-control" placeholder="e.g. Broken light in Lab 3" maxlength="200" required value="<?=htmlspecialchars($_POST['title']??'')?>"></div>
                 <div class="field-group"><label class="form-label" for="description">Description *</label><textarea id="description" name="description" class="form-control" rows="5" placeholder="Describe the issue in detail — what's wrong, how long it has been happening, and its impact…" required><?=htmlspecialchars($_POST['description']??'')?></textarea><div class="muted-note" style="margin-top:4px;">Be as descriptive as possible for faster resolution.</div></div>
                 <div class="field-group" style="margin-bottom:0"><label class="form-label" for="location">Campus location *</label><input type="text" id="location" name="location" class="form-control" placeholder="e.g. Block A – Computer Lab 3, 2nd Floor" required value="<?=htmlspecialchars($_POST['location']??'')?>"></div>
+                <div id="similarIssueContainer" style="display:none;"></div>
               </div>
             </div>
             <div class="panel">
@@ -191,7 +192,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
                   <button type="button" class="photo-option-card" id="uploadZone">
                     <i class="bi bi-cloud-arrow-up"></i>
                     <span class="option-title">Upload from device</span>
-                    <span class="option-desc">Click or drag &amp; drop images (JPG, PNG, WEBP)</span>
+                    <span class="option-desc">Click, drag &amp; drop, or paste screenshot (Ctrl+V)</span>
                   </button>
                   <button type="button" class="photo-option-card camera-option-card" id="btnOpenCamera" onclick="openCameraModal()">
                     <i class="bi bi-camera-fill"></i>
@@ -575,6 +576,102 @@ function setupImageUpload() {
       input.value = '';
     }
   });
+
+  // Clipboard Paste Support (Ctrl+V / Command+V)
+  document.addEventListener('paste', (e) => {
+    // If active element is a text input or textarea, check if clipboard has actual files/images
+    const activeEl = document.activeElement;
+    const isTextFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && (activeEl.type === 'text' || activeEl.tagName === 'TEXTAREA');
+
+    if (e.clipboardData && e.clipboardData.items) {
+      const items = e.clipboardData.items;
+      const pastedImages = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            const ext = blob.type.split('/')[1] || 'png';
+            const file = new File([blob], `screenshot_${Date.now()}.${ext}`, { type: blob.type });
+            pastedImages.push(file);
+          }
+        }
+      }
+      if (pastedImages.length > 0) {
+        if (isTextFocused) {
+          // If they pasted an image while in a text input, don't block text pasting but attach the image
+          handleNewUploadFiles(pastedImages);
+        } else {
+          e.preventDefault();
+          handleNewUploadFiles(pastedImages);
+        }
+        const alertEl = document.getElementById('uploadAlert');
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.style.color = 'var(--emerald)';
+          alertEl.innerHTML = `<i class="bi bi-clipboard-check me-1"></i> Attached ${pastedImages.length} image(s) from clipboard!`;
+          setTimeout(() => { if (alertEl.style.color === 'var(--emerald)') alertEl.style.display = 'none'; }, 4000);
+        }
+      }
+    }
+  });
+}
+
+// Similar issue real-time detection
+let debounceSimilarTimer = null;
+function checkSimilarIssuesDebounced() {
+  clearTimeout(debounceSimilarTimer);
+  debounceSimilarTimer = setTimeout(async () => {
+    const catEl = document.getElementById('category_id');
+    const locEl = document.getElementById('location');
+    const titleEl = document.getElementById('title');
+    const container = document.getElementById('similarIssueContainer');
+    if (!container) return;
+
+    const catId = catEl ? catEl.value : 0;
+    const loc = locEl ? locEl.value.trim() : '';
+    const title = titleEl ? titleEl.value.trim() : '';
+
+    if (!catId && loc.length < 3 && title.length < 3) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    try {
+      const query = new URLSearchParams({ category_id: catId, location: loc, title: title });
+      const res = await fetch(`../api/check_similar_issues.php?${query.toString()}`);
+      const data = await res.json();
+
+      if (data.success && data.count > 0) {
+        let issuesHtml = data.similar.map(item => `
+          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;margin-top:6px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-weight:600;font-size:13px;color:#f8fafc;">#${item.issue_id} — ${escapeHtml(item.title)}</div>
+              <div style="font-size:11px;color:#94a3b8;"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(item.location)} &bull; Reported by ${escapeHtml(item.reporter_name || 'Student')}</div>
+            </div>
+            <span class="badge badge-amber" style="text-transform:capitalize;font-size:11px;">${escapeHtml(item.status.replace('_', ' '))}</span>
+          </div>
+        `).join('');
+
+        container.innerHTML = `
+          <div style="margin-top:12px;background:rgba(245, 158, 11, 0.08);border:1px solid rgba(245, 158, 11, 0.35);border-radius:10px;padding:12px 14px;" class="fade-in-up">
+            <div style="display:flex;align-items:center;gap:8px;color:#f59e0b;font-weight:600;font-size:13px;margin-bottom:4px;">
+              <i class="bi bi-info-circle-fill"></i>
+              <span>Similar Active Issue Detected (${data.count})</span>
+            </div>
+            <p style="font-size:12px;color:#cbd5e1;margin:0 0 6px 0;">Campus maintenance is already actively working on an issue in this area. If your report matches, it will automatically link to accelerate resolution:</p>
+            ${issuesHtml}
+          </div>
+        `;
+        container.style.display = 'block';
+      } else {
+        container.style.display = 'none';
+        container.innerHTML = '';
+      }
+    } catch (err) {
+      console.warn('Error checking similar issues:', err);
+    }
+  }, 400);
 }
 
 function handleNewUploadFiles(files) {
@@ -716,7 +813,15 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-document.addEventListener('DOMContentLoaded', setupImageUpload);
+document.addEventListener('DOMContentLoaded', () => {
+  setupImageUpload();
+  const locEl = document.getElementById('location');
+  const catEl = document.getElementById('category_id');
+  const titleEl = document.getElementById('title');
+  if (locEl) locEl.addEventListener('input', checkSimilarIssuesDebounced);
+  if (catEl) catEl.addEventListener('change', checkSimilarIssuesDebounced);
+  if (titleEl) titleEl.addEventListener('input', checkSimilarIssuesDebounced);
+});
 
 // Live Camera Viewfinder & Capture Logic
 let cameraStream = null;

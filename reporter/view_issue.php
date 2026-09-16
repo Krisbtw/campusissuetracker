@@ -3,10 +3,43 @@ session_start();
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
+require_once '../includes/stepper_helper.php';
 requireRole(['student','staff']);
 $u = currentUser();
 
 $id = intval($_GET['id'] ?? 0);
+
+// Handle Student Star Rating & Feedback Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'submit_feedback') {
+    $rating = intval($_POST['rating'] ?? 0);
+    $feedback = trim($_POST['feedback'] ?? '');
+    
+    if ($rating < 1 || $rating > 5) {
+        $_SESSION['flash_error'] = 'Please select a star rating between 1 and 5.';
+    } else {
+        $stmt = $pdo->prepare("UPDATE issues SET rating = ?, feedback = ?, feedback_at = NOW(), status = 'closed', updated_at = NOW() WHERE issue_id = ? AND reported_by = ?");
+        $stmt->execute([$rating, $feedback, $id, $u['id']]);
+        
+        logStatusChange($pdo, $id, $u['id'], 'resolved', 'closed', "Student rated {$rating}/5: {$feedback}");
+        
+        $cCheck = $pdo->prepare("SELECT assigned_to, title FROM issues WHERE issue_id = ?");
+        $cCheck->execute([$id]);
+        $issData = $cCheck->fetch();
+
+        if (!empty($issData['assigned_to'])) {
+            sendNotification($pdo, $issData['assigned_to'], $id, "🌟 Student {$u['name']} rated resolution {$rating}/5 stars on issue #{$id}!", 'success');
+        }
+        $admins = $pdo->query("SELECT user_id FROM users WHERE role='admin'")->fetchAll();
+        foreach ($admins as $admin) {
+            sendNotification($pdo, $admin['user_id'], $id, "Issue #{$id} was rated {$rating}/5 by {$u['name']} and automatically closed.", 'info');
+        }
+        
+        $_SESSION['flash_success'] = 'Thank you for your rating and feedback! The issue has been marked as closed.';
+        header('Location: view_issue.php?id=' . $id);
+        exit();
+    }
+}
+
 $stmt = $pdo->prepare("SELECT i.*,c.category_name,rb.full_name AS reporter_name,rb.email AS reporter_email,
     ab.full_name AS assigned_name FROM issues i
     LEFT JOIN categories c ON i.category_id=c.category_id
@@ -40,6 +73,7 @@ $pageSubtitle = htmlspecialchars($issue['title']);
 <title>Issue #<?= $id ?> – FixMyCampus</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -60,10 +94,90 @@ $pageSubtitle = htmlspecialchars($issue['title']);
         <?php unset($_SESSION['flash_error']); ?>
       <?php endif; ?>
 
+      <!-- Interactive Progress Stepper -->
+      <?= renderIssueStepper($issue, $history) ?>
+
       <div class="detail-grid">
 
         <!-- Left: Issue Details -->
         <div style="display:flex;flex-direction:column;gap:16px;">
+
+          <!-- Student Resolution Star Rating Card (When Resolved) -->
+          <?php if($issue['status'] === 'resolved'): ?>
+          <div class="panel spotlight-card border-beam-card" style="border-left: 4px solid var(--emerald);">
+            <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-patch-check-fill" style="color:var(--emerald);font-size:18px;"></i>
+                <span style="font-weight:600;">Issue Resolved — How Did We Do?</span>
+              </div>
+              <span class="badge badge-emerald">Action Required</span>
+            </div>
+            <div class="panel-body">
+              <p class="muted-note" style="margin-bottom:14px;">The campus maintenance team has marked your issue as fixed. Please rate the quality of service below to close this ticket, or reopen if further attention is needed.</p>
+              
+              <form method="POST" action="view_issue.php?id=<?= $id ?>">
+                <input type="hidden" name="action" value="submit_feedback">
+                <input type="hidden" name="rating" id="ratingValue" value="5" required>
+                
+                <div class="star-rating-box" style="margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+                  <span style="font-size:13px;font-weight:600;color:var(--text-muted);">Your Rating:</span>
+                  <div class="star-rating-buttons" id="starRatingGroup" style="display:inline-flex;gap:6px;">
+                    <?php for($s=1; $s<=5; $s++): ?>
+                      <button type="button" class="star-btn" data-value="<?= $s ?>" onclick="setStarRating(<?= $s ?>)" aria-label="<?= $s ?> stars" style="background:none;border:none;font-size:24px;color:#f59e0b;cursor:pointer;padding:0;transition:transform 0.15s ease;">
+                        <i class="bi bi-star-fill" id="star_icon_<?= $s ?>"></i>
+                      </button>
+                    <?php endfor; ?>
+                  </div>
+                  <span id="ratingDescription" style="font-size:13px;font-weight:600;color:var(--text-primary);padding:2px 8px;background:rgba(245,158,11,0.12);border-radius:6px;">5 - Excellent</span>
+                </div>
+
+                <div class="field-group">
+                  <label class="form-label" for="feedbackComment">Resolution Feedback / Notes (Optional)</label>
+                  <textarea id="feedbackComment" name="feedback" rows="2" class="form-control" placeholder="Tell us if the repair was fast, clean, or if anything else is needed..."></textarea>
+                </div>
+
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2-circle me-1"></i>Rate &amp; Close Ticket
+                  </button>
+                  <button type="button" onclick="openReopenModal()" class="btn btn-secondary">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Issue Not Fixed (Reopen)
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <?php endif; ?>
+
+          <!-- Rating & Feedback Display (When Closed) -->
+          <?php if($issue['status'] === 'closed' && !empty($issue['rating'])): ?>
+          <div class="panel" style="border-left: 4px solid #f59e0b;">
+            <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
+                <span style="font-weight:600;">Resolution Quality Rating</span>
+              </div>
+              <span class="badge badge-emerald">Ticket Closed</span>
+            </div>
+            <div class="panel-body">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="color:#f59e0b;font-size:20px;letter-spacing:3px;">
+                  <?= str_repeat('★', $issue['rating']) ?><?= str_repeat('☆', 5 - $issue['rating']) ?>
+                </div>
+                <span style="font-weight:700;font-size:14px;color:var(--text-primary);"><?= $issue['rating'] ?> / 5 Stars</span>
+                <?php if(!empty($issue['feedback_at'])): ?>
+                  <span class="muted-note" style="font-size:11px;">&bull; Submitted <?= date('d M Y', strtotime($issue['feedback_at'])) ?></span>
+                <?php endif; ?>
+              </div>
+              <?php if(!empty($issue['feedback'])): ?>
+                <p style="font-style:italic;color:var(--text-primary);margin:0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+                  "<?= htmlspecialchars($issue['feedback']) ?>"
+                </p>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php endif; ?>
+
           <div class="panel">
             <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
               <div>
@@ -151,6 +265,58 @@ $pageSubtitle = htmlspecialchars($issue['title']);
                 ?>
                   <p class="muted-note">No image preview available</p>
                 <?php endif; ?>
+              </div>
+            </div>
+          </div>
+          <?php endif; ?>
+          <!-- Proof of Work Before & After Comparison -->
+          <?php if(!empty($issue['resolution_image'])): 
+            $beforeImg = !empty($images[0]['image_path']) ? $images[0]['image_path'] : '';
+            $afterImg = $issue['resolution_image'];
+            
+            $webBefore = '';
+            if ($beforeImg) {
+              if (filter_var($beforeImg, FILTER_VALIDATE_URL) || strpos($beforeImg, 'http') === 0) {
+                $webBefore = $beforeImg;
+              } elseif (strpos($beforeImg, 'uploads/') === 0) {
+                $webBefore = '../' . $beforeImg;
+              } else {
+                $webBefore = '../uploads/issues/' . ltrim($beforeImg, '/');
+              }
+            }
+            
+            $webAfter = '';
+            if (filter_var($afterImg, FILTER_VALIDATE_URL) || strpos($afterImg, 'http') === 0) {
+              $webAfter = $afterImg;
+            } elseif (strpos($afterImg, 'uploads/') === 0) {
+              $webAfter = '../' . $afterImg;
+            } else {
+              $webAfter = '../uploads/issues/' . ltrim($afterImg, '/');
+            }
+          ?>
+          <div class="panel">
+            <div class="panel-header" style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-images" style="color:var(--emerald);"></i>
+              <span>Resolution Proof: Before &amp; After Inspection</span>
+            </div>
+            <div class="panel-body">
+              <div class="before-after-grid">
+                <div class="before-after-card">
+                  <span class="evidence-tag before">Before Repair</span>
+                  <?php if ($webBefore): ?>
+                    <a href="<?= htmlspecialchars($webBefore) ?>" target="_blank">
+                      <img src="<?= htmlspecialchars($webBefore) ?>" alt="Original Issue Photo">
+                    </a>
+                  <?php else: ?>
+                    <div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No initial photo attached</div>
+                  <?php endif; ?>
+                </div>
+                <div class="before-after-card">
+                  <span class="evidence-tag after">After (Fixed)</span>
+                  <a href="<?= htmlspecialchars($webAfter) ?>" target="_blank">
+                    <img src="<?= htmlspecialchars($webAfter) ?>" alt="Technician Resolution Proof">
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -270,6 +436,34 @@ $pageSubtitle = htmlspecialchars($issue['title']);
 <script>
 function openReopenModal() { document.getElementById('reopenModal').style.display = 'flex'; }
 function closeReopenModal() { document.getElementById('reopenModal').style.display = 'none'; }
+
+const starLabels = {
+  1: '1 - Poor',
+  2: '2 - Fair',
+  3: '3 - Good',
+  4: '4 - Very Good',
+  5: '5 - Excellent'
+};
+
+function setStarRating(val) {
+  const hiddenInput = document.getElementById('ratingValue');
+  const desc = document.getElementById('ratingDescription');
+  if (hiddenInput) hiddenInput.value = val;
+  if (desc) desc.innerText = starLabels[val] || (val + ' Stars');
+
+  for (let i = 1; i <= 5; i++) {
+    const icon = document.getElementById('star_icon_' + i);
+    if (icon) {
+      if (i <= val) {
+        icon.className = 'bi bi-star-fill';
+        icon.style.color = '#f59e0b';
+      } else {
+        icon.className = 'bi bi-star';
+        icon.style.color = '#64748b';
+      }
+    }
+  }
+}
 
 async function deleteIssueImage(imageId) {
   if (!confirm('Are you sure you want to delete this photo evidence?')) return;

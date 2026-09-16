@@ -3,6 +3,7 @@ session_start();
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
+require_once '../includes/announcement_helper.php';
 requireRole('admin');
 
 $u = currentUser();
@@ -64,6 +65,7 @@ $pageSubtitle = 'System overview';
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -75,6 +77,8 @@ $pageSubtitle = 'System overview';
         <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
         <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
       </div>
+
+      <?= renderActiveAnnouncement($pdo) ?>
 
       <?php if (!empty($pendingStaffCount) && $pendingStaffCount > 0): ?>
         <div class="alert-banner alert-warning fade-in-up" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;background:rgba(217,119,6,0.12);border:1px solid var(--amber);color:var(--text);">

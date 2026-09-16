@@ -38,8 +38,23 @@ CREATE TABLE IF NOT EXISTS issues (
     affected_count INT DEFAULT 1,
     reopen_count INT DEFAULT 0,
     admin_remark TEXT DEFAULT NULL,
+    rating SMALLINT DEFAULT NULL,
+    feedback TEXT DEFAULT NULL,
+    feedback_at TIMESTAMP DEFAULT NULL,
+    resolution_image VARCHAR(500) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Announcements Table
+CREATE TABLE IF NOT EXISTS announcements (
+    announcement_id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    urgency VARCHAR(20) DEFAULT 'info',
+    created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    is_active SMALLINT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. Issue Images Table

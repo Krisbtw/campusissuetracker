@@ -50,7 +50,15 @@ for ($i = 5; $i >= 0; $i--) {
 // Top reporters
 $topReporters = $pdo->query("SELECT u.full_name, u.role, COUNT(i.issue_id) AS cnt FROM users u LEFT JOIN issues i ON i.reported_by=u.user_id GROUP BY u.user_id, u.full_name, u.role ORDER BY cnt DESC LIMIT 5")->fetchAll();
 
-$pageTitle='Reports & Analytics'; $pageSubtitle='Issue statistics and system overview';
+// Student satisfaction rating metrics
+$ratingQuery = $pdo->query("SELECT AVG(rating) as avg_rating, COUNT(rating) as total_ratings FROM issues WHERE rating IS NOT NULL AND rating > 0")->fetch();
+$avgRating = $ratingQuery['avg_rating'] ? round((float)$ratingQuery['avg_rating'], 1) : 0;
+$totalRatings = (int)($ratingQuery['total_ratings'] ?? 0);
+
+// Recent student feedback reviews
+$recentFeedback = $pdo->query("SELECT i.issue_id, i.title, i.rating, i.feedback, i.feedback_at, u.full_name as reporter_name FROM issues i LEFT JOIN users u ON i.reported_by = u.user_id WHERE i.rating IS NOT NULL AND i.rating > 0 ORDER BY i.feedback_at DESC LIMIT 4")->fetchAll();
+
+$pageTitle='Reports & Analytics'; $pageSubtitle='Issue statistics and facilities performance overview';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,6 +68,7 @@ $pageTitle='Reports & Analytics'; $pageSubtitle='Issue statistics and system ove
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -68,18 +77,31 @@ $pageTitle='Reports & Analytics'; $pageSubtitle='Issue statistics and system ove
     <?php include '../includes/topbar.php'; ?>
     <main class="page-content">
 
-      <div class="page-head">
-        <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
-        <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
+      <div class="page-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div>
+          <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
+          <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <a href="export_reports.php" class="btn btn-secondary" style="gap:6px;">
+            <i class="bi bi-file-earmark-spreadsheet-fill" style="color:var(--emerald);"></i>
+            <span>Export CSV</span>
+          </a>
+          <button type="button" onclick="window.print()" class="btn btn-primary" style="gap:6px;">
+            <i class="bi bi-printer-fill"></i>
+            <span>Print / PDF Report</span>
+          </button>
+        </div>
       </div>
 
       <!-- Summary Stats -->
-      <div class="summary-grid">
-        <div class="stat-card"><div class="stat-value"><?= $totalIssues ?></div><div class="stat-label">Total issues</div></div>
-        <div class="stat-card"><div class="stat-value"><?= $resolvedIssues ?></div><div class="stat-label">Resolved</div></div>
-        <div class="stat-card"><div class="stat-value"><?= $pendingIssues ?></div><div class="stat-label">Pending</div></div>
-        <div class="stat-card"><div class="stat-value"><?= $totalUsers ?></div><div class="stat-label">Active users</div></div>
-        <div class="stat-card"><div class="stat-value"><?= $resolutionRate ?>%</div><div class="stat-label">Resolution rate</div></div>
+      <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+        <div class="stat-card spotlight-card"><div class="stat-value"><?= $totalIssues ?></div><div class="stat-label">Total issues</div></div>
+        <div class="stat-card spotlight-card"><div class="stat-value"><?= $resolvedIssues ?></div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card spotlight-card"><div class="stat-value"><?= $pendingIssues ?></div><div class="stat-label">Pending</div></div>
+        <div class="stat-card spotlight-card"><div class="stat-value"><?= $totalUsers ?></div><div class="stat-label">Active users</div></div>
+        <div class="stat-card spotlight-card"><div class="stat-value"><?= $resolutionRate ?>%</div><div class="stat-label">Resolution rate</div></div>
+        <div class="stat-card spotlight-card" style="border-top:3px solid #f59e0b;"><div class="stat-value" style="color:#f59e0b;"><?= $avgRating > 0 ? $avgRating . ' ★' : 'N/A' ?></div><div class="stat-label">Satisfaction (<?= $totalRatings ?>)</div></div>
       </div>
 
       <div class="two-col-grid">
@@ -163,6 +185,42 @@ $pageTitle='Reports & Analytics'; $pageSubtitle='Issue statistics and system ove
           </div>
         </div>
       </div>
+      <!-- Recent Student Feedback & Ratings -->
+      <?php if(!empty($recentFeedback)): ?>
+      <div class="panel spotlight-card border-beam-card" style="margin-top:20px;">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
+            <span>Recent Student Feedback &amp; Ratings</span>
+          </div>
+          <span class="badge badge-amber"><?= $totalRatings ?> Total Reviews</span>
+        </div>
+        <div class="panel-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:16px;">
+            <?php foreach($recentFeedback as $fb): ?>
+              <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="color:#f59e0b;font-size:16px;"><?= str_repeat('★', $fb['rating']) ?><?= str_repeat('☆', 5 - $fb['rating']) ?></span>
+                    <a href="view_issue.php?id=<?= $fb['issue_id'] ?>" style="font-size:12px;font-weight:600;">#<?= $fb['issue_id'] ?></a>
+                  </div>
+                  <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--text);"><?= htmlspecialchars($fb['title']) ?></div>
+                  <?php if(!empty($fb['feedback'])): ?>
+                    <p style="font-style:italic;font-size:12px;color:var(--text-muted);margin:0;line-height:1.4;">"<?= htmlspecialchars($fb['feedback']) ?>"</p>
+                  <?php else: ?>
+                    <p style="font-size:12px;color:var(--text-muted);margin:0;">No comment left.</p>
+                  <?php endif; ?>
+                </div>
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);">
+                  <span><?= htmlspecialchars($fb['reporter_name'] ?? 'Student') ?></span>
+                  <span><?= !empty($fb['feedback_at']) ? date('M d, Y', strtotime($fb['feedback_at'])) : '' ?></span>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
     </main>
   </div>
 </div>

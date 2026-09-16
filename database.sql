@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS issues (
     is_parent TINYINT(1) DEFAULT 0,
     affected_count INT(11) DEFAULT 1,
     admin_remark TEXT DEFAULT NULL,
+    rating TINYINT(1) DEFAULT NULL,
+    feedback TEXT DEFAULT NULL,
+    feedback_at DATETIME DEFAULT NULL,
+    resolution_image VARCHAR(500) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (issue_id),
@@ -57,6 +61,20 @@ CREATE TABLE IF NOT EXISTS issues (
     CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL,
     CONSTRAINT fk_parent_issue FOREIGN KEY (parent_id) REFERENCES issues(issue_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- Announcements Table
+CREATE TABLE IF NOT EXISTS announcements (
+    announcement_id INT(11) NOT NULL AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    urgency ENUM('info','warning','critical') NOT NULL DEFAULT 'info',
+    created_by INT(11) NOT NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (announcement_id),
+    KEY fk_ann_creator (created_by),
+    CONSTRAINT fk_ann_creator FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Issue Images Table
 CREATE TABLE IF NOT EXISTS issue_images (

@@ -1690,3 +1690,27 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: v
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+@media print {
+  .sidebar, .topbar, .filter-bar, .btn, .btn-sm-icon, .announcement-banner, .toast-container, .ambient-canvas, .search-modal {
+    display: none !important;
+  }
+  .app-wrapper {
+    display: block !important;
+  }
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  body, .page-content {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  .panel, .stat-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+  }
+}

@@ -333,6 +333,67 @@ try {
         // Continue if column exists or ALTER restricted
     }
 
+    // Auto-migrate issue feedback, rating, and resolution proof
+    try {
+        if ($driver === 'pgsql') {
+            $issColsStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'issues'");
+            $issCols = $issColsStmt ? $issColsStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+            if (!in_array('rating', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN rating SMALLINT DEFAULT NULL");
+            }
+            if (!in_array('feedback', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback TEXT DEFAULT NULL");
+            }
+            if (!in_array('feedback_at', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback_at TIMESTAMP DEFAULT NULL");
+            }
+            if (!in_array('resolution_image', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN resolution_image VARCHAR(500) DEFAULT NULL");
+            }
+
+            // Create announcements table if missing
+            $pdo->exec("CREATE TABLE IF NOT EXISTS announcements (
+                announcement_id SERIAL PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                urgency VARCHAR(20) DEFAULT 'info',
+                created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                is_active SMALLINT DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+        } else {
+            $issCols = $pdo->query("SHOW COLUMNS FROM issues")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('rating', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN rating TINYINT(1) DEFAULT NULL");
+            }
+            if (!in_array('feedback', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback TEXT DEFAULT NULL");
+            }
+            if (!in_array('feedback_at', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback_at DATETIME DEFAULT NULL");
+            }
+            if (!in_array('resolution_image', $issCols)) {
+                $pdo->exec("ALTER TABLE issues ADD COLUMN resolution_image VARCHAR(500) DEFAULT NULL");
+            }
+
+            // Create announcements table if missing
+            $pdo->exec("CREATE TABLE IF NOT EXISTS announcements (
+                announcement_id INT(11) NOT NULL AUTO_INCREMENT,
+                title VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                urgency ENUM('info','warning','critical') NOT NULL DEFAULT 'info',
+                created_by INT(11) NOT NULL,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (announcement_id),
+                KEY fk_ann_creator (created_by),
+                CONSTRAINT fk_ann_creator FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    } catch (Exception $ex) {
+        // Continue if columns exist or ALTER restricted
+    }
+
 } catch (PDOException $e) {
     die(json_encode(["error" => "Database connection failed: " . $e->getMessage()]));
 }

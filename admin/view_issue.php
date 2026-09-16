@@ -3,6 +3,7 @@ session_start();
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
+require_once '../includes/stepper_helper.php';
 requireRole('admin');
 $u = currentUser();
 
@@ -101,6 +102,7 @@ $pageTitle = 'Issue #'.$id.' – Admin View'; $pageSubtitle = htmlspecialchars($
 <title>Issue #<?= $id ?> Admin – FixMyCampus</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -112,10 +114,43 @@ $pageTitle = 'Issue #'.$id.' – Admin View'; $pageSubtitle = htmlspecialchars($
       <?php if($msg): ?><div class="alert-banner alert-success" role="status"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
       <?php if($err): ?><div class="alert-banner alert-danger" role="alert"><?= htmlspecialchars($err) ?></div><?php endif; ?>
 
+      <!-- Interactive Progress Stepper -->
+      <?= renderIssueStepper($issue, $history) ?>
+
       <div class="detail-grid">
 
         <!-- Left: Details -->
         <div style="display:flex;flex-direction:column;gap:16px;">
+
+          <!-- Student Resolution Rating & Feedback Card -->
+          <?php if(!empty($issue['rating'])): ?>
+          <div class="panel spotlight-card border-beam-card" style="border-left: 4px solid #f59e0b;">
+            <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
+                <span style="font-weight:600;">Student Satisfaction Feedback</span>
+              </div>
+              <span class="badge badge-emerald">Verified by Student</span>
+            </div>
+            <div class="panel-body">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="color:#f59e0b;font-size:20px;letter-spacing:3px;">
+                  <?= str_repeat('★', $issue['rating']) ?><?= str_repeat('☆', 5 - $issue['rating']) ?>
+                </div>
+                <span style="font-weight:700;font-size:14px;color:var(--text-primary);"><?= $issue['rating'] ?> / 5 Stars</span>
+                <?php if(!empty($issue['feedback_at'])): ?>
+                  <span class="muted-note" style="font-size:11px;">&bull; Submitted <?= date('d M Y, h:i A', strtotime($issue['feedback_at'])) ?></span>
+                <?php endif; ?>
+              </div>
+              <?php if(!empty($issue['feedback'])): ?>
+                <p style="font-style:italic;color:var(--text-primary);margin:0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+                  "<?= htmlspecialchars($issue['feedback']) ?>"
+                </p>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php endif; ?>
+
           <div class="panel">
             <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
               <div>
@@ -228,6 +263,59 @@ $pageTitle = 'Issue #'.$id.' – Admin View'; $pageSubtitle = htmlspecialchars($
                 ?>
                   <p class="muted-note">No image preview available</p>
                 <?php endif; ?>
+              </div>
+            </div>
+          </div>
+          <?php endif; ?>
+
+          <!-- Proof of Work Before & After Comparison -->
+          <?php if(!empty($issue['resolution_image'])): 
+            $beforeImg = !empty($images[0]['image_path']) ? $images[0]['image_path'] : '';
+            $afterImg = $issue['resolution_image'];
+            
+            $webBefore = '';
+            if ($beforeImg) {
+              if (filter_var($beforeImg, FILTER_VALIDATE_URL) || strpos($beforeImg, 'http') === 0) {
+                $webBefore = $beforeImg;
+              } elseif (strpos($beforeImg, 'uploads/') === 0) {
+                $webBefore = '../' . $beforeImg;
+              } else {
+                $webBefore = '../uploads/issues/' . ltrim($beforeImg, '/');
+              }
+            }
+            
+            $webAfter = '';
+            if (filter_var($afterImg, FILTER_VALIDATE_URL) || strpos($afterImg, 'http') === 0) {
+              $webAfter = $afterImg;
+            } elseif (strpos($afterImg, 'uploads/') === 0) {
+              $webAfter = '../' . $afterImg;
+            } else {
+              $webAfter = '../uploads/issues/' . ltrim($afterImg, '/');
+            }
+          ?>
+          <div class="panel">
+            <div class="panel-header" style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-images" style="color:var(--emerald);"></i>
+              <span>Proof of Work: Before &amp; After Photo Evidence</span>
+            </div>
+            <div class="panel-body">
+              <div class="before-after-grid">
+                <div class="before-after-card">
+                  <span class="evidence-tag before">Before</span>
+                  <?php if ($webBefore): ?>
+                    <a href="<?= htmlspecialchars($webBefore) ?>" target="_blank">
+                      <img src="<?= htmlspecialchars($webBefore) ?>" alt="Original Issue Photo">
+                    </a>
+                  <?php else: ?>
+                    <div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No initial photo attached</div>
+                  <?php endif; ?>
+                </div>
+                <div class="before-after-card">
+                  <span class="evidence-tag after">After (Fixed)</span>
+                  <a href="<?= htmlspecialchars($webAfter) ?>" target="_blank">
+                    <img src="<?= htmlspecialchars($webAfter) ?>" alt="Technician Resolution Proof">
+                  </a>
+                </div>
               </div>
             </div>
           </div>

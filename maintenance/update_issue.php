@@ -3,6 +3,7 @@ session_start();
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
+require_once '../includes/stepper_helper.php';
 requireRole('maintenance');
 $u = currentUser();
 
@@ -32,7 +33,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (empty($remarks)) { $err = 'Please provide a remark.'; }
     else {
         $old_status = $issue['status'];
-        $pdo->prepare("UPDATE issues SET status=?,updated_at=NOW() WHERE issue_id=?")->execute([$new_status,$id]);
+
+        // Handle Resolution Proof Photo Upload
+        $resolution_img = null;
+        if (!empty($_FILES['resolution_image']['tmp_name']) && $_FILES['resolution_image']['error'] === UPLOAD_ERR_OK) {
+            $tmp = $_FILES['resolution_image']['tmp_name'];
+            $allowed = ['image/jpeg','image/png','image/jpg','image/webp'];
+            $mime = mime_content_type($tmp);
+            if (in_array($mime, $allowed)) {
+                $cUrl = uploadToCloudinary($tmp);
+                if ($cUrl) {
+                    $resolution_img = $cUrl;
+                } else {
+                    if (!file_exists(UPLOAD_DIR)) { @mkdir(UPLOAD_DIR, 0777, true); }
+                    $ext = pathinfo($_FILES['resolution_image']['name'], PATHINFO_EXTENSION);
+                    $newName = 'resolved_' . $id . '_' . uniqid() . '.' . strtolower($ext);
+                    if (move_uploaded_file($tmp, UPLOAD_DIR . $newName)) {
+                        $resolution_img = $newName;
+                    }
+                }
+            }
+        }
+
+        if ($resolution_img) {
+            $pdo->prepare("UPDATE issues SET status=?, resolution_image=?, updated_at=NOW() WHERE issue_id=?")->execute([$new_status, $resolution_img, $id]);
+        } else {
+            $pdo->prepare("UPDATE issues SET status=?, updated_at=NOW() WHERE issue_id=?")->execute([$new_status, $id]);
+        }
+
         logStatusChange($pdo,$id,$u['id'],$old_status,$new_status,$remarks);
         $type = $new_status==='resolved'?'success':'info';
         sendNotification($pdo,$issue['reported_by'],$id,"Your issue #{$id} ({$issue['title']}) status is now '".ucwords(str_replace('_',' ',$new_status))."'. Note: {$remarks}",$type);
@@ -46,7 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cStmt = $pdo->prepare("SELECT issue_id, reported_by, status FROM issues WHERE (parent_id = ? OR issue_id = ?) AND issue_id != ?");
             $cStmt->execute([$rootParentId, $rootParentId, $id]);
             foreach ($cStmt->fetchAll() as $ch) {
-                $pdo->prepare("UPDATE issues SET status=?, updated_at=NOW() WHERE issue_id=?")->execute([$new_status, $ch['issue_id']]);
+                if ($resolution_img) {
+                    $pdo->prepare("UPDATE issues SET status=?, resolution_image=?, updated_at=NOW() WHERE issue_id=?")->execute([$new_status, $resolution_img, $ch['issue_id']]);
+                } else {
+                    $pdo->prepare("UPDATE issues SET status=?, updated_at=NOW() WHERE issue_id=?")->execute([$new_status, $ch['issue_id']]);
+                }
                 logStatusChange($pdo, $ch['issue_id'], $u['id'], $ch['status'], $new_status, "Status sync from Parent Incident #{$rootParentId}. {$remarks}");
                 sendNotification($pdo, $ch['reported_by'], $ch['issue_id'], "Your report #{$ch['issue_id']} (linked to Parent Incident #{$rootParentId}) status changed to '".ucwords(str_replace('_',' ',$new_status))."'. Note: {$remarks}", $type);
             }
@@ -88,7 +120,8 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Update Issue – FixMyCampus</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="../assets/css/style.css"></head>
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css"></head>
 <body>
 <div class="app-wrapper">
   <?php include '../includes/sidebar.php'; ?>
@@ -98,6 +131,9 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
       <div style="margin-bottom:14px;"><a href="my_assignments.php" class="muted-note"><i class="bi bi-arrow-left me-1"></i>Back to assignments</a></div>
       <?php if($msg): ?><div class="alert-banner alert-success" role="status"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
       <?php if($err): ?><div class="alert-banner alert-danger" role="alert"><?= htmlspecialchars($err) ?></div><?php endif; ?>
+
+      <!-- Interactive Progress Stepper -->
+      <?= renderIssueStepper($issue, $history) ?>
 
       <div class="detail-grid">
         <div style="display:flex;flex-direction:column;gap:16px;">
@@ -204,6 +240,59 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
             </div>
           </div>
           <?php endif; ?>
+          <!-- Before & After Proof of Work Evidence -->
+          <?php if(!empty($issue['resolution_image'])): 
+            $beforeImg = !empty($images[0]['image_path']) ? $images[0]['image_path'] : '';
+            $afterImg = $issue['resolution_image'];
+            
+            $webBefore = '';
+            if ($beforeImg) {
+              if (filter_var($beforeImg, FILTER_VALIDATE_URL) || strpos($beforeImg, 'http') === 0) {
+                $webBefore = $beforeImg;
+              } elseif (strpos($beforeImg, 'uploads/') === 0) {
+                $webBefore = '../' . $beforeImg;
+              } else {
+                $webBefore = '../uploads/issues/' . ltrim($beforeImg, '/');
+              }
+            }
+            
+            $webAfter = '';
+            if (filter_var($afterImg, FILTER_VALIDATE_URL) || strpos($afterImg, 'http') === 0) {
+              $webAfter = $afterImg;
+            } elseif (strpos($afterImg, 'uploads/') === 0) {
+              $webAfter = '../' . $afterImg;
+            } else {
+              $webAfter = '../uploads/issues/' . ltrim($afterImg, '/');
+            }
+          ?>
+          <div class="panel">
+            <div class="panel-header" style="display:flex;align-items:center;gap:8px;">
+              <i class="bi bi-images" style="color:var(--emerald);"></i>
+              <span>Proof of Work: Before &amp; After Photo Comparison</span>
+            </div>
+            <div class="panel-body">
+              <div class="before-after-grid">
+                <div class="before-after-card">
+                  <span class="evidence-tag before">Before Repair</span>
+                  <?php if ($webBefore): ?>
+                    <a href="<?= htmlspecialchars($webBefore) ?>" target="_blank">
+                      <img src="<?= htmlspecialchars($webBefore) ?>" alt="Before Repair">
+                    </a>
+                  <?php else: ?>
+                    <div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;">No initial photo attached</div>
+                  <?php endif; ?>
+                </div>
+                <div class="before-after-card">
+                  <span class="evidence-tag after">After (Resolved)</span>
+                  <a href="<?= htmlspecialchars($webAfter) ?>" target="_blank">
+                    <img src="<?= htmlspecialchars($webAfter) ?>" alt="After Repair Completed">
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <?php endif; ?>
+
           <div class="panel"><div class="panel-header">Status timeline</div><div class="panel-body">
             <?php if(empty($history)): ?><p class="muted-note">No changes yet.</p>
             <?php else: ?><div class="timeline"><?php foreach($history as $h): $col=$statusColors[$h['new_status']]??'var(--status-closed)'; ?><div class="timeline-item"><div class="timeline-dot" style="background:<?= $col ?>;"></div><div class="timeline-content"><div class="t-title"><?php if($h['old_status']): ?><?= getStatusBadge($h['old_status']) ?> <i class="bi bi-arrow-right mx-1" style="font-size:.875rem;"></i><?php endif; ?><?= getStatusBadge($h['new_status']) ?></div><div class="t-meta">By <b><?= htmlspecialchars($h['full_name']) ?></b> &bull; <?= date('d M Y, h:i A',strtotime($h['changed_at'])) ?></div><?php if($h['remarks']): ?><div class="t-remark">"<?= htmlspecialchars($h['remarks']) ?>"</div><?php endif; ?></div></div><?php endforeach; ?></div>
@@ -217,13 +306,18 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
           <div class="panel">
             <div class="panel-header">Update status</div>
             <div class="panel-body">
-              <form method="POST">
+              <form method="POST" enctype="multipart/form-data">
                 <div class="field-group">
                   <label class="form-label">Set status to</label>
                   <select name="new_status" class="form-control" aria-label="Set issue status">
                     <option value="in_progress" <?= $issue['status']==='in_progress'?'selected':'' ?>>In progress</option>
                     <option value="resolved">Mark as resolved</option>
                   </select>
+                </div>
+                <div class="field-group">
+                  <label class="form-label">Proof of work / Resolution photo</label>
+                  <input type="file" name="resolution_image" accept="image/jpeg,image/png,image/webp" class="form-control">
+                  <div class="muted-note" style="margin-top:4px;">Attach photo showing fixed equipment or cleaned area.</div>
                 </div>
                 <div class="field-group" style="margin-bottom:0">
                   <label class="form-label">Work notes / remark *</label>

@@ -3,6 +3,7 @@ session_start();
 require_once '../includes/auth_check.php';
 require_once '../config/db.php';
 require_once '../includes/notification_helper.php';
+require_once '../includes/announcement_helper.php';
 requireRole(['student','staff']);
 $u=currentUser();
 $stT=$pdo->prepare("SELECT COUNT(*) FROM issues WHERE reported_by=?");$stT->execute([$u['id']]);$total=$stT->fetchColumn();
@@ -20,6 +21,7 @@ $pageTitle='Dashboard';$pageSubtitle='Welcome back, '.explode(' ',$u['name'])[0]
 <title>Dashboard – FixMyCampus</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/animations.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -31,6 +33,9 @@ $pageTitle='Dashboard';$pageSubtitle='Welcome back, '.explode(' ',$u['name'])[0]
         <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
         <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
       </div>
+
+      <?= renderActiveAnnouncement($pdo) ?>
+
       <div class="stat-grid">
         <div class="stat-card spotlight-card fade-in-up stagger-1"><div class="stat-value"><?=$total?></div><div class="stat-label">Total reported</div></div>
         <div class="stat-card spotlight-card fade-in-up stagger-2"><div class="stat-value"><?=$pending?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>Pending</div></div>
