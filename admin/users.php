@@ -91,9 +91,10 @@ $pageTitle='Users Management'; $pageSubtitle='View and manage registered users';
 
       <!-- Pending Staff Verification Banner/Panel -->
       <?php if (!empty($pendingStaff)): ?>
-      <div class="panel" style="border-left:4px solid var(--amber);margin-bottom:20px;">
+      <div class="panel border-beam-card spotlight-card fade-in-up" style="border-left:4px solid var(--amber);margin-bottom:20px;">
         <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:8px;">
+            <span class="pulse-dot pulse-dot-amber"></span>
             <i class="bi bi-shield-exclamation" style="color:var(--amber);font-size:1.15rem;"></i>
             <span style="font-weight:600;">Pending Staff Verifications (<?= count($pendingStaff) ?>)</span>
           </div>
@@ -166,7 +167,7 @@ $pageTitle='Users Management'; $pageSubtitle='View and manage registered users';
         <a href="users.php" class="btn btn-secondary">Clear</a>
       </form>
 
-      <div class="panel">
+      <div class="panel spotlight-card fade-in-up stagger-2">
         <div class="panel-header"><span>Users (<?= count($users) ?>)</span></div>
         <div class="table-scroll" role="region" aria-label="Users table" tabindex="0"><table class="table-dark-custom">
           <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Department</th><th scope="col">Phone</th><th scope="col">Issues</th><th scope="col">Joined</th><th scope="col">Action</th></tr></thead>

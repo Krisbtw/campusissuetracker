@@ -145,3 +145,4 @@ function closeSearch(){document.getElementById('searchModal').classList.remove('
 function closeSearchOnBg(e){if(e.target===document.getElementById('searchModal'))closeSearch();}
 document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openSearch();}if(e.key==='Escape')closeSearch();});
 </script>
+<script src="<?=$base?>assets/js/animations.js"></script>

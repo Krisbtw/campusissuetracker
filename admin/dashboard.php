@@ -77,8 +77,9 @@ $pageSubtitle = 'System overview';
       </div>
 
       <?php if (!empty($pendingStaffCount) && $pendingStaffCount > 0): ?>
-        <div class="alert-banner alert-warning" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;background:rgba(217,119,6,0.12);border:1px solid var(--amber);color:var(--text);">
+        <div class="alert-banner alert-warning fade-in-up" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;background:rgba(217,119,6,0.12);border:1px solid var(--amber);color:var(--text);">
           <div style="display:flex;align-items:center;gap:10px;">
+            <span class="pulse-dot pulse-dot-amber"></span>
             <i class="bi bi-shield-exclamation" style="font-size:1.3rem;color:var(--amber);"></i>
             <span><strong><?= $pendingStaffCount ?> staff applicant<?= $pendingStaffCount > 1 ? 's are' : ' is' ?> awaiting verification.</strong> Review and approve or reject to grant access.</span>
           </div>
@@ -87,18 +88,18 @@ $pageSubtitle = 'System overview';
       <?php endif; ?>
 
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value"><?=$stats['total']?></div><div class="stat-label">Total issues</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$stats['pending']?></div><div class="stat-label">Pending</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$stats['in_progress']?></div><div class="stat-label">In progress</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$stats['resolved']?></div><div class="stat-label">Resolved</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$criticalOpen?></div><div class="stat-label">Critical open</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$totalUsers?></div><div class="stat-label">Registered users</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-1"><div class="stat-value"><?=$stats['total']?></div><div class="stat-label">Total issues</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-2"><div class="stat-value"><?=$stats['pending']?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>Pending</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-3"><div class="stat-value"><?=$stats['in_progress']?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>In progress</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-4"><div class="stat-value"><?=$stats['resolved']?></div><div class="stat-label"><span class="pulse-dot pulse-dot-emerald" style="margin-right:5px;"></span>Resolved</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-5"><div class="stat-value"><?=$criticalOpen?></div><div class="stat-label"><span class="pulse-dot pulse-dot-rose" style="margin-right:5px;"></span>Critical open</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-6"><div class="stat-value"><?=$totalUsers?></div><div class="stat-label">Registered users</div></div>
       </div>
 
       <div class="content-grid">
         <div style="display:flex;flex-direction:column;gap:14px;">
           <!-- Recent Issues Table -->
-          <div class="panel">
+          <div class="panel spotlight-card fade-in-up stagger-4">
             <div class="panel-header"><span>Recent issues</span><a href="issues.php">View all</a></div>
             <div class="table-scroll" role="region" aria-label="Issues table" tabindex="0"><table class="table-dark-custom">
               <thead>

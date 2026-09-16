@@ -32,13 +32,13 @@ $pageTitle='Dashboard';$pageSubtitle='Welcome back, '.explode(' ',$u['name'])[0]
         <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
       </div>
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value"><?=$total?></div><div class="stat-label">Total reported</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$pending?></div><div class="stat-label">Pending</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$progress?></div><div class="stat-label">In progress</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$resolved?></div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-1"><div class="stat-value"><?=$total?></div><div class="stat-label">Total reported</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-2"><div class="stat-value"><?=$pending?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>Pending</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-3"><div class="stat-value"><?=$progress?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>In progress</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-4"><div class="stat-value"><?=$resolved?></div><div class="stat-label"><span class="pulse-dot pulse-dot-emerald" style="margin-right:5px;"></span>Resolved</div></div>
       </div>
       <div class="content-grid">
-        <div class="panel">
+        <div class="panel spotlight-card fade-in-up stagger-4">
           <div class="panel-header"><span>Recent issues</span><a href="my_issues.php">View all</a></div>
           <?php if(empty($recentIssues)):?>
             <div class="empty-state"><p>No issues yet.</p><a href="report_issue.php" class="btn btn-primary">Report an issue</a></div>

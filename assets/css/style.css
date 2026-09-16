@@ -1,4 +1,5 @@
 @import url('tokens.css');
+@import url('animations.css');
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body {

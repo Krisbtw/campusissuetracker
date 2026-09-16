@@ -47,8 +47,9 @@ $error_get=htmlspecialchars($_GET['error']??'');
 <link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body class="auth-page auth-login-page">
+<canvas id="ambientCanvas" class="ambient-canvas"></canvas>
 <main class="auth-wrapper">
-  <section class="auth-card g-login" aria-labelledby="login-title">
+  <section class="auth-card g-login border-beam-card spotlight-card" aria-labelledby="login-title">
     <div class="login-inner">
       <div class="auth-brand">FixMyCampus</div>
       <h1 class="login-title" id="login-title">Sign in</h1>
@@ -71,7 +72,7 @@ $error_get=htmlspecialchars($_GET['error']??'');
             </button>
           </div>
         </div>
-        <button type="submit" class="lbtn" id="sbtn">Sign in</button>
+        <button type="submit" class="lbtn btn-shimmer" id="sbtn">Sign in</button>
 
         <div class="demo-logins" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -110,5 +111,6 @@ document.querySelectorAll('.demo-chip').forEach(btn=>{
   });
 });
 </script>
+<script src="assets/js/animations.js"></script>
 </body>
 </html>

@@ -31,12 +31,12 @@ $pageTitle='Dashboard';$pageSubtitle='Your active assignments';
         <p class="page-sub"><?=htmlspecialchars($pageSubtitle)?></p>
       </div>
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value"><?=$assigned?></div><div class="stat-label">Assigned</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$inprog?></div><div class="stat-label">In progress</div></div>
-        <div class="stat-card"><div class="stat-value"><?=$done?></div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-1"><div class="stat-value"><?=$assigned?></div><div class="stat-label">Assigned</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-2"><div class="stat-value"><?=$inprog?></div><div class="stat-label"><span class="pulse-dot pulse-dot-amber" style="margin-right:5px;"></span>In progress</div></div>
+        <div class="stat-card spotlight-card fade-in-up stagger-3"><div class="stat-value"><?=$done?></div><div class="stat-label"><span class="pulse-dot pulse-dot-emerald" style="margin-right:5px;"></span>Resolved</div></div>
       </div>
       <div class="content-grid">
-        <div class="panel">
+        <div class="panel spotlight-card fade-in-up stagger-4">
           <div class="panel-header"><span>My assignments</span><a href="my_assignments.php">View all</a></div>
           <?php if(empty($assignments)):?>
             <div class="empty-state"><p>No issues assigned.</p></div>

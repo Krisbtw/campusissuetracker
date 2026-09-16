@@ -66,8 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body class="auth-page auth-register-page">
+<canvas id="ambientCanvas" class="ambient-canvas"></canvas>
 <main class="auth-wrapper">
-  <div class="auth-card auth-register-card">
+  <div class="auth-card auth-register-card border-beam-card spotlight-card">
     <div class="auth-brand">FixMyCampus</div>
     <h1 class="auth-card-title">Create account</h1>
 
@@ -134,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
       </div>
-      <button type="submit" class="auth-submit">Create account</button>
+      <button type="submit" class="auth-submit btn-shimmer">Create account</button>
     </form>
 
     <p class="auth-signin" style="margin-top:16px;">
@@ -166,5 +167,6 @@ document.querySelectorAll('.eye-toggle-btn').forEach(btn => {
   });
 });
 </script>
+<script src="assets/js/animations.js"></script>
 </body>
 </html>
