@@ -308,6 +308,225 @@
   document.head.appendChild(style);
 
   /* ==========================================================================
+     6. shadcn/ui & 21st.dev Style: Interactive Select Dropdowns
+     ========================================================================== */
+  function closeAllShadcnDropdowns(except = null) {
+    document.querySelectorAll('.shadcn-select-wrapper.open').forEach((w) => {
+      if (w !== except) {
+        w.classList.remove('open');
+        w.querySelector('.shadcn-select-trigger')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  function initShadcnSelects() {
+    const selects = document.querySelectorAll('select:not([data-native-select]):not([multiple])');
+
+    selects.forEach((select) => {
+      if (select.dataset.shadcnInit) return;
+      select.dataset.shadcnInit = 'true';
+
+      // Hide native select visually while keeping it fully accessible and in DOM
+      select.style.position = 'absolute';
+      select.style.opacity = '0';
+      select.style.pointerEvents = 'none';
+      select.style.width = '1px';
+      select.style.height = '1px';
+      select.style.margin = '-1px';
+      select.style.overflow = 'hidden';
+      select.style.clip = 'rect(0,0,0,0)';
+      select.setAttribute('tabindex', '-1');
+
+      // Create wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'shadcn-select-wrapper';
+      if (select.classList.contains('filter-control')) wrapper.classList.add('filter-control-wrap');
+      if (select.className) {
+        select.classList.forEach(cls => {
+          if (cls !== 'form-control' && cls !== 'filter-control' && cls !== 'form-select') {
+            wrapper.classList.add(cls + '-wrap');
+          }
+        });
+      }
+
+      // Determine initial selected option
+      const selectedOption = select.options[select.selectedIndex] || select.options[0];
+      const initialText = selectedOption ? selectedOption.text : 'Select...';
+      const isPlaceholder = selectedOption && (selectedOption.value === '' || selectedOption.disabled);
+
+      // Create trigger
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'shadcn-select-trigger';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = `shadcn-select-value${isPlaceholder ? ' placeholder' : ''}`;
+      valueSpan.textContent = initialText;
+
+      const chevron = document.createElement('i');
+      chevron.className = 'bi bi-chevron-down shadcn-select-chevron';
+
+      trigger.appendChild(valueSpan);
+      trigger.appendChild(chevron);
+      wrapper.appendChild(trigger);
+
+      // Create floating content menu
+      const content = document.createElement('div');
+      content.className = 'shadcn-select-content';
+      content.setAttribute('role', 'listbox');
+
+      // Populate options
+      Array.from(select.options).forEach((opt, idx) => {
+        const item = document.createElement('div');
+        item.className = `shadcn-select-item${opt.selected ? ' selected' : ''}`;
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', opt.selected ? 'true' : 'false');
+        item.dataset.value = opt.value;
+        item.dataset.index = idx;
+
+        const check = document.createElement('i');
+        check.className = 'bi bi-check2 shadcn-select-check';
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = opt.text;
+
+        item.appendChild(check);
+        item.appendChild(textSpan);
+
+        if (opt.disabled) {
+          item.classList.add('disabled');
+          item.style.opacity = '0.5';
+          item.style.pointerEvents = 'none';
+        }
+
+        item.addEventListener('click', (e) => {
+          if (opt.disabled) return;
+          e.stopPropagation();
+          selectItem(opt.value, opt.text, idx);
+          closeDropdown();
+        });
+
+        content.appendChild(item);
+      });
+
+      wrapper.appendChild(content);
+
+      // Insert wrapper right after native select
+      if (select.parentNode) {
+        select.parentNode.insertBefore(wrapper, select.nextSibling);
+      }
+
+      function selectItem(val, text, idx) {
+        select.selectedIndex = idx;
+        select.value = val;
+        valueSpan.textContent = text;
+        if (val === '') valueSpan.classList.add('placeholder');
+        else valueSpan.classList.remove('placeholder');
+
+        // Update selected items
+        content.querySelectorAll('.shadcn-select-item').forEach((it, i) => {
+          if (i === idx) {
+            it.classList.add('selected');
+            it.setAttribute('aria-selected', 'true');
+          } else {
+            it.classList.remove('selected');
+            it.setAttribute('aria-selected', 'false');
+          }
+        });
+
+        // Dispatch change event on native select
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      // Sync on parent form reset
+      if (select.form) {
+        select.form.addEventListener('reset', () => {
+          setTimeout(() => {
+            const opt = select.options[select.selectedIndex] || select.options[0];
+            if (opt) {
+              valueSpan.textContent = opt.text;
+              if (opt.value === '') valueSpan.classList.add('placeholder');
+              else valueSpan.classList.remove('placeholder');
+              content.querySelectorAll('.shadcn-select-item').forEach((it, i) => {
+                it.classList.toggle('selected', i === select.selectedIndex);
+              });
+            }
+          }, 10);
+        });
+      }
+
+      function toggleDropdown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const isOpen = wrapper.classList.contains('open');
+        closeAllShadcnDropdowns(wrapper);
+        if (!isOpen) {
+          wrapper.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+          const sel = content.querySelector('.shadcn-select-item.selected');
+          if (sel) {
+            sel.scrollIntoView({ block: 'nearest' });
+          }
+        } else {
+          closeDropdown();
+        }
+      }
+
+      function closeDropdown() {
+        wrapper.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+
+      trigger.addEventListener('click', toggleDropdown);
+
+      // Keyboard accessibility
+      trigger.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!wrapper.classList.contains('open')) {
+            toggleDropdown(e);
+          } else {
+            const items = Array.from(content.querySelectorAll('.shadcn-select-item'));
+            const curIdx = items.findIndex(it => it.classList.contains('selected'));
+            const nextIdx = Math.min(items.length - 1, Math.max(0, curIdx + 1));
+            if (items[nextIdx]) selectItem(select.options[nextIdx].value, select.options[nextIdx].text, nextIdx);
+          }
+        } else if (e.key === 'ArrowUp' && wrapper.classList.contains('open')) {
+          e.preventDefault();
+          const items = Array.from(content.querySelectorAll('.shadcn-select-item'));
+          const curIdx = items.findIndex(it => it.classList.contains('selected'));
+          const prevIdx = Math.max(0, curIdx - 1);
+          if (items[prevIdx]) selectItem(select.options[prevIdx].value, select.options[prevIdx].text, prevIdx);
+        } else if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      });
+
+      // Listen for external programmatic changes on native select
+      select.addEventListener('change', () => {
+        const curOpt = select.options[select.selectedIndex];
+        if (curOpt) {
+          valueSpan.textContent = curOpt.text;
+          if (curOpt.value === '') valueSpan.classList.add('placeholder');
+          else valueSpan.classList.remove('placeholder');
+          content.querySelectorAll('.shadcn-select-item').forEach((it, i) => {
+            it.classList.toggle('selected', i === select.selectedIndex);
+          });
+        }
+      });
+    });
+  }
+
+  // Global click outside listener
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.shadcn-select-wrapper')) {
+      closeAllShadcnDropdowns();
+    }
+  });
+
+  /* ==========================================================================
      Initialization on DOMContentLoaded
      ========================================================================== */
   function initAll() {
@@ -316,6 +535,7 @@
     initCountUp();
     initAutoToasts();
     initRippleEffect();
+    initShadcnSelects();
   }
 
   if (document.readyState === 'loading') {

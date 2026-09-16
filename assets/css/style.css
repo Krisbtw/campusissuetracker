@@ -980,9 +980,9 @@ input[type="search"], select, textarea, .form-control, .form-select, .filter-con
 }
 input::placeholder, textarea::placeholder { color: var(--form-placeholder); opacity: 1; }
 input:focus, select:focus, textarea:focus {
-  outline: 2px solid var(--burg2);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--burg2);
+  box-shadow: 0 0 0 3px rgba(123, 30, 43, 0.15);
 }
 select option { background: var(--surface); color: var(--form-text); }
 input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; accent-color: var(--burg); }
