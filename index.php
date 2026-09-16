@@ -72,11 +72,13 @@ $error_get=htmlspecialchars($_GET['error']??'');
             <span style="font-size:11px;color:var(--text-muted);">(Password: <code>password123</code>)</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            <button type="button" class="demo-chip" data-email="admin@fixmycampus.com" data-pwd="password123" style="background:var(--card-bg, #f4ece1);border:1px solid var(--border, #dcd1c4);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text, #3c1515);">Admin</button>
-            <button type="button" class="demo-chip" data-email="student@fixmycampus.com" data-pwd="password123" style="background:var(--card-bg, #f4ece1);border:1px solid var(--border, #dcd1c4);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text, #3c1515);">Student</button>
-            <button type="button" class="demo-chip" data-email="staff@fixmycampus.com" data-pwd="password123" style="background:var(--card-bg, #f4ece1);border:1px solid var(--border, #dcd1c4);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text, #3c1515);">Staff</button>
-            <button type="button" class="demo-chip" data-email="maintenance@fixmycampus.com" data-pwd="password123" style="background:var(--card-bg, #f4ece1);border:1px solid var(--border, #dcd1c4);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text, #3c1515);">Maintenance</button>
-            <button type="button" class="demo-chip" data-email="tech@fixmycampus.com" data-pwd="password123" style="background:var(--card-bg, #f4ece1);border:1px solid var(--border, #dcd1c4);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text, #3c1515);">IT Tech</button>
+            <button type="button" class="demo-chip" data-email="admin@fixmycampus.com" data-pwd="password123" title="Admin User (Administration)">Admin</button>
+            <button type="button" class="demo-chip" data-email="student@fixmycampus.com" data-pwd="password123" title="John Student (Reporter)">Student</button>
+            <button type="button" class="demo-chip" data-email="staff@fixmycampus.com" data-pwd="password123" title="Jane Staff (Reporter)">Staff</button>
+            <button type="button" class="demo-chip" data-email="maintenance@fixmycampus.com" data-pwd="password123" title="Mike Maintenance (Maintenance Dept)">Maintenance</button>
+            <button type="button" class="demo-chip" data-email="tech@fixmycampus.com" data-pwd="password123" title="Sarah Techie (IT Department)">IT Tech</button>
+            <button type="button" class="demo-chip" data-email="staff2@fixmycampus.com" data-pwd="password123" title="Maintenance Tech 2 (Electrical Dept)">Electrical (Tech 2)</button>
+            <button type="button" class="demo-chip" data-email="staff1@fixmycampus.com" data-pwd="password123" title="Maintenance Tech 1 (Facilities)">Facilities (Tech 1)</button>
           </div>
         </div>
 

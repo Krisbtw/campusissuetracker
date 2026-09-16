@@ -31,10 +31,12 @@ The live deployment on Vercel comes pre-loaded with active accounts for testing 
 | Role | Email Address | Password | Portal Scope |
 | :--- | :--- | :--- | :--- |
 | **🛡️ Administrator** | `admin@fixmycampus.com` | `password123` | Master triage, analytics, staff assignment & user control |
-| **🎓 Student (Reporter)** | `student@fixmycampus.com` | `password123` | Submit issues with photos, AI assistant, track live status |
+| **🎓 Student (Reporter)** | `student@fixmycampus.com` | `password123` | Submit issues with photos/camera, AI assistant, track live status |
 | **👩‍🏫 Staff (Reporter)** | `staff@fixmycampus.com` | `password123` | Departmental facility reports & status history |
-| **🔧 Maintenance Staff** | `maintenance@fixmycampus.com` | `password123` | View assigned work orders, update progress, log resolutions |
+| **🔧 Maintenance (General)** | `maintenance@fixmycampus.com` | `password123` | View assigned work orders, update progress, log resolutions |
 | **💻 IT Technician** | `tech@fixmycampus.com` | `password123` | IT & network tickets, add technical remarks & close |
+| **⚡ Electrical Tech 2** | `staff2@fixmycampus.com` | `password123` | Electrical outages, lighting, wiring repair queue |
+| **🏢 Facilities Tech 1** | `staff1@fixmycampus.com` | `password123` | Campus infrastructure, plumbing & facility assignments |
 
 ---
 
