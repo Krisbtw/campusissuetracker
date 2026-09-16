@@ -214,9 +214,14 @@ $pageTitle = 'Issue #'.$id.' – Admin View'; $pageSubtitle = htmlspecialchars($
                   }
                   $validImgCount++;
                 ?>
-                  <a href="<?= htmlspecialchars($webPath) ?>" target="_blank" class="evidence-link">
-                    <img src="<?= htmlspecialchars($webPath) ?>" alt="Issue Evidence" class="evidence-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Image+Not+Found';" />
-                  </a>
+                  <div class="evidence-item-card" id="imgCard_<?= $img['image_id'] ?>">
+                    <a href="<?= htmlspecialchars($webPath) ?>" target="_blank" class="evidence-link">
+                      <img src="<?= htmlspecialchars($webPath) ?>" alt="Issue Evidence" class="evidence-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Image+Not+Found';" />
+                    </a>
+                    <button type="button" class="evidence-delete-btn" onclick="deleteIssueImage(<?= $img['image_id'] ?>)" title="Delete this photo evidence" aria-label="Delete image">
+                      <i class="bi bi-trash3-fill"></i>
+                    </button>
+                  </div>
                 <?php 
                 endforeach;
                 if ($validImgCount === 0):
@@ -344,5 +349,31 @@ $pageTitle = 'Issue #'.$id.' – Admin View'; $pageSubtitle = htmlspecialchars($
     </main>
   </div>
 </div>
+<script>
+async function deleteIssueImage(imageId) {
+  if (!confirm('Are you sure you want to delete this photo evidence?')) return;
+  try {
+    const res = await fetch('../api/delete_issue_image.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_id: imageId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const card = document.getElementById('imgCard_' + imageId);
+      if (card) {
+        card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.8)';
+        setTimeout(() => card.remove(), 200);
+      }
+    } else {
+      alert(data.error || 'Failed to delete image.');
+    }
+  } catch (err) {
+    alert('Network error while deleting image.');
+  }
+}
+</script>
 </body>
 </html>

@@ -178,15 +178,19 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
               </div>
             </div>
             <div class="panel">
-              <div class="panel-header">Photo evidence</div>
+              <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Photo evidence</span>
+                <span id="imgCountBadge" class="badge badge-subtle" style="display:none;font-weight:600;"></span>
+              </div>
               <div class="panel-body">
-                <button type="button" class="upload-zone" id="uploadZone" onclick="document.getElementById('imgInput').click()">
+                <button type="button" class="upload-zone" id="uploadZone">
                   <i class="bi bi-cloud-upload"></i>
-                  <p style="font-weight:500;margin-bottom:2px;">Click to upload images</p>
+                  <p style="font-weight:500;margin-bottom:2px;">Click to upload or drag &amp; drop images</p>
                   <p>JPG, PNG, WEBP — max 5 MB each, up to 5 images</p>
                 </button>
-                <input type="file" id="imgInput" name="images[]" multiple accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="previewImages(this)">
-                <div id="imgPreview" class="img-gallery" style="margin-top:10px;"></div>
+                <input type="file" id="imgInput" name="images[]" multiple accept="image/jpeg,image/png,image/webp" style="display:none;">
+                <div id="uploadAlert" class="form-help" style="display:none;color:var(--rose);margin-top:8px;font-weight:500;"></div>
+                <div id="imgPreview" class="img-preview-container" style="margin-top:12px;"></div>
               </div>
             </div>
           </div>
@@ -522,13 +526,184 @@ function toggleVoiceRecording() {
   }
 }
 
-function previewImages(input){
-  const preview=document.getElementById('imgPreview');preview.innerHTML='';
-  Array.from(input.files).slice(0,5).forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{const img=document.createElement('img');img.src=e.target.result;preview.appendChild(img);};
+let selectedUploadFiles = [];
+
+function setupImageUpload() {
+  const input = document.getElementById('imgInput');
+  const zone = document.getElementById('uploadZone');
+  if (!input || !zone) return;
+
+  zone.addEventListener('click', () => input.click());
+
+  ['dragenter', 'dragover'].forEach(name => {
+    zone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.add('drag-active');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+    zone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.remove('drag-active');
+    });
+  });
+
+  zone.addEventListener('drop', (e) => {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      handleNewUploadFiles(Array.from(e.dataTransfer.files));
+    }
+  });
+
+  input.addEventListener('change', () => {
+    if (input.files && input.files.length) {
+      handleNewUploadFiles(Array.from(input.files));
+      input.value = '';
+    }
+  });
+}
+
+function handleNewUploadFiles(files) {
+  const alertEl = document.getElementById('uploadAlert');
+  if (alertEl) {
+    alertEl.style.display = 'none';
+    alertEl.innerText = '';
+  }
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+  const maxPerFile = 5 * 1024 * 1024; // 5 MB
+  const maxTotal = 5;
+  const errors = [];
+
+  for (const file of files) {
+    if (selectedUploadFiles.length >= maxTotal) {
+      errors.push(`Maximum ${maxTotal} images allowed.`);
+      break;
+    }
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isAllowedExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext);
+    if (!allowed.includes(file.type.toLowerCase()) && !isAllowedExt) {
+      errors.push(`"${file.name}" is not an accepted image format (JPG, PNG, WEBP).`);
+      continue;
+    }
+    if (file.size > maxPerFile) {
+      errors.push(`"${file.name}" exceeds 5 MB limit (${formatFileSize(file.size)}).`);
+      continue;
+    }
+
+    const isDuplicate = selectedUploadFiles.some(f => f.name === file.name && f.size === file.size);
+    if (!isDuplicate) {
+      selectedUploadFiles.push(file);
+    }
+  }
+
+  if (errors.length > 0 && alertEl) {
+    alertEl.innerText = errors.join(' ');
+    alertEl.style.display = 'block';
+  }
+
+  syncUploadInput();
+  renderImagePreviews();
+}
+
+function removeImage(index) {
+  if (index >= 0 && index < selectedUploadFiles.length) {
+    selectedUploadFiles.splice(index, 1);
+    const alertEl = document.getElementById('uploadAlert');
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.innerText = '';
+    }
+    syncUploadInput();
+    renderImagePreviews();
+  }
+}
+
+function clearAllImages() {
+  selectedUploadFiles = [];
+  const alertEl = document.getElementById('uploadAlert');
+  if (alertEl) {
+    alertEl.style.display = 'none';
+    alertEl.innerText = '';
+  }
+  syncUploadInput();
+  renderImagePreviews();
+}
+
+function syncUploadInput() {
+  const input = document.getElementById('imgInput');
+  if (!input) return;
+  if (window.DataTransfer) {
+    const dt = new DataTransfer();
+    selectedUploadFiles.forEach(file => dt.items.add(file));
+    input.files = dt.files;
+  }
+}
+
+function renderImagePreviews() {
+  const preview = document.getElementById('imgPreview');
+  const countBadge = document.getElementById('imgCountBadge');
+  if (!preview) return;
+
+  if (selectedUploadFiles.length === 0) {
+    preview.innerHTML = '';
+    if (countBadge) countBadge.style.display = 'none';
+    return;
+  }
+
+  if (countBadge) {
+    countBadge.innerText = `${selectedUploadFiles.length}/5 selected`;
+    countBadge.style.display = 'inline-block';
+  }
+
+  preview.innerHTML = `
+    <div class="thumb-header-bar">
+      <span class="thumb-count-text"><i class="bi bi-images me-1"></i>Attached photos (${selectedUploadFiles.length}/5)</span>
+      <button type="button" class="btn-clear-all" onclick="clearAllImages()" title="Remove all photos">
+        <i class="bi bi-trash3 me-1"></i>Clear all
+      </button>
+    </div>
+    <div class="thumb-gallery-grid" id="thumbGalleryGrid"></div>
+  `;
+
+  const grid = document.getElementById('thumbGalleryGrid');
+
+  selectedUploadFiles.forEach((file, idx) => {
+    const card = document.createElement('div');
+    card.className = 'thumb-card';
+    card.innerHTML = `
+      <div class="thumb-img-wrap">
+        <img src="" alt="${escapeHtml(file.name)}" id="thumb_img_${idx}">
+        <button type="button" class="thumb-delete-btn" onclick="removeImage(${idx})" title="Delete this image" aria-label="Delete ${escapeHtml(file.name)}">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="thumb-info">
+        <span class="thumb-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+        <span class="thumb-size">${formatFileSize(file.size)}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imgEl = document.getElementById(`thumb_img_${idx}`);
+      if (imgEl) imgEl.src = e.target.result;
+    };
     reader.readAsDataURL(file);
   });
 }
+
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+document.addEventListener('DOMContentLoaded', setupImageUpload);
 </script>
 </body></html>
