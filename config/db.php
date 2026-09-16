@@ -37,12 +37,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // 3. Resolve connection parameters (URL or discrete variables)
 $rawDbUrl = getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ($_SERVER['DATABASE_URL'] ?? (getenv('POSTGRES_URL') ?: ($_ENV['POSTGRES_URL'] ?? ''))));
 
-$driver = 'pgsql';
-$host   = 'localhost';
-$port   = '5432';
-$db     = 'postgres';
-$user   = 'your_db_username';
-$pass   = 'your_database_password_here';
+$explicitDriver = getenv('DB_DRIVER') ?: ($_ENV['DB_DRIVER'] ?? ($_SERVER['DB_DRIVER'] ?? ''));
+$driver = !empty($explicitDriver) ? strtolower($explicitDriver) : (((getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '')) == '3306') ? 'mysql' : 'pgsql');
+$host   = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? ($_SERVER['DB_HOST'] ?? '127.0.0.1'));
+$port   = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? ($_SERVER['DB_PORT'] ?? ($driver === 'pgsql' ? '5432' : '3306')));
+$db     = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? ($_SERVER['DB_NAME'] ?? 'fixmycampus'));
+$user   = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? ($_SERVER['DB_USER'] ?? ($driver === 'pgsql' ? 'postgres' : 'root')));
+$pass   = getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? ($_SERVER['DB_PASSWORD'] ?? ''));
 
 if (!empty($rawDbUrl)) {
     $parsed = parse_url($rawDbUrl);
@@ -58,19 +59,6 @@ if (!empty($rawDbUrl)) {
         $cleanPath = ltrim($parsed['path'], '/');
         $db = rtrim(trim($cleanPath), '_');
     }
-} else {
-    $explicitDriver = getenv('DB_DRIVER') ?: ($_ENV['DB_DRIVER'] ?? ($_SERVER['DB_DRIVER'] ?? ''));
-    if (!empty($explicitDriver)) {
-        $driver = strtolower($explicitDriver);
-    } elseif ((getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '')) == '3306') {
-        $driver = 'mysql';
-    }
-    
-    $host = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? ($_SERVER['DB_HOST'] ?? $host));
-    $port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? ($_SERVER['DB_PORT'] ?? $port));
-    $db   = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? ($_SERVER['DB_NAME'] ?? $db));
-    $user = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? ($_SERVER['DB_USER'] ?? $user));
-    $pass = getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? ($_SERVER['DB_PASSWORD'] ?? $pass));
 }
 
 if (!defined('DB_DRIVER')) define('DB_DRIVER', $driver);
@@ -119,10 +107,10 @@ if (!defined('UPLOAD_DIR')) define('UPLOAD_DIR', __DIR__ . '/../uploads/issues/'
 if (!defined('UPLOAD_URL')) define('UPLOAD_URL', BASE_URL . 'uploads/issues/');
 if (!defined('MAX_FILE_SIZE')) define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB
 
-if (!defined('CLOUDINARY_CLOUD_NAME'))   define('CLOUDINARY_CLOUD_NAME',   getenv('CLOUDINARY_CLOUD_NAME')   ?: ($_ENV['CLOUDINARY_CLOUD_NAME'] ?? ($_SERVER['CLOUDINARY_CLOUD_NAME'] ?? 'your_cloudinary_cloud_name')));
-if (!defined('CLOUDINARY_API_KEY'))      define('CLOUDINARY_API_KEY',      getenv('CLOUDINARY_API_KEY')      ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? 'your_cloudinary_api_key')));
-if (!defined('CLOUDINARY_API_SECRET'))   define('CLOUDINARY_API_SECRET',   getenv('CLOUDINARY_API_SECRET')   ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? 'your_cloudinary_api_secret')));
-if (!defined('CLOUDINARY_UPLOAD_PRESET')) define('CLOUDINARY_UPLOAD_PRESET', getenv('CLOUDINARY_UPLOAD_PRESET') ?: ($_ENV['CLOUDINARY_UPLOAD_PRESET'] ?? ($_SERVER['CLOUDINARY_UPLOAD_PRESET'] ?? 'fixmycampus_preset')));
+if (!defined('CLOUDINARY_CLOUD_NAME'))   define('CLOUDINARY_CLOUD_NAME',   getenv('CLOUDINARY_CLOUD_NAME')   ?: ($_ENV['CLOUDINARY_CLOUD_NAME'] ?? ($_SERVER['CLOUDINARY_CLOUD_NAME'] ?? '')));
+if (!defined('CLOUDINARY_API_KEY'))      define('CLOUDINARY_API_KEY',      getenv('CLOUDINARY_API_KEY')      ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? '')));
+if (!defined('CLOUDINARY_API_SECRET'))   define('CLOUDINARY_API_SECRET',   getenv('CLOUDINARY_API_SECRET')   ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? '')));
+if (!defined('CLOUDINARY_UPLOAD_PRESET')) define('CLOUDINARY_UPLOAD_PRESET', getenv('CLOUDINARY_UPLOAD_PRESET') ?: ($_ENV['CLOUDINARY_UPLOAD_PRESET'] ?? ($_SERVER['CLOUDINARY_UPLOAD_PRESET'] ?? '')));
 
 /**
  * Upload image file to Cloudinary REST API with authentication
@@ -133,10 +121,15 @@ if (!function_exists('uploadToCloudinary')) {
             return null;
         }
 
-        $cloudName    = defined('CLOUDINARY_CLOUD_NAME') ? CLOUDINARY_CLOUD_NAME : 'your_cloudinary_cloud_name';
-        $apiKey       = defined('CLOUDINARY_API_KEY') ? CLOUDINARY_API_KEY : 'your_cloudinary_api_key';
-        $apiSecret    = defined('CLOUDINARY_API_SECRET') ? CLOUDINARY_API_SECRET : 'your_cloudinary_api_secret';
-        $uploadPreset = defined('CLOUDINARY_UPLOAD_PRESET') ? CLOUDINARY_UPLOAD_PRESET : 'fixmycampus_preset';
+        $cloudName    = defined('CLOUDINARY_CLOUD_NAME') ? CLOUDINARY_CLOUD_NAME : (getenv('CLOUDINARY_CLOUD_NAME') ?: '');
+        $apiKey       = defined('CLOUDINARY_API_KEY') ? CLOUDINARY_API_KEY : (getenv('CLOUDINARY_API_KEY') ?: '');
+        $apiSecret    = defined('CLOUDINARY_API_SECRET') ? CLOUDINARY_API_SECRET : (getenv('CLOUDINARY_API_SECRET') ?: '');
+        $uploadPreset = defined('CLOUDINARY_UPLOAD_PRESET') ? CLOUDINARY_UPLOAD_PRESET : (getenv('CLOUDINARY_UPLOAD_PRESET') ?: '');
+
+        if (empty($cloudName) || empty($apiKey) || empty($apiSecret)) {
+            error_log('Cloudinary credentials are not configured.');
+            return null;
+        }
 
         $url = "https://api.cloudinary.com/v1_1/" . $cloudName . "/image/upload";
         $timestamp = time();
