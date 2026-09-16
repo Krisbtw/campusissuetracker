@@ -108,7 +108,7 @@ $statusColors=['pending'=>'var(--status-pending)','in_progress'=>'var(--status-p
 // Roster Query for Duplicate Incident Cluster
 $roster = [];
 if ($rootParentId > 0) {
-    $rStmt = $pdo->prepare("SELECT i.issue_id, i.created_at, i.status, i.parent_id, i.is_parent, u.full_name, u.email, u.phone, u.department FROM issues i LEFT JOIN users u ON i.reported_by = u.user_id WHERE i.issue_id = ? OR i.parent_id = ? ORDER BY (CASE WHEN i.issue_id = ? THEN 1 ELSE 0 END) DESC, i.created_at ASC");
+    $rStmt = $pdo->prepare("SELECT i.issue_id, i.created_at, i.status, i.reopen_count, i.parent_id, i.is_parent, u.full_name, u.email, u.phone, u.department FROM issues i LEFT JOIN users u ON i.reported_by = u.user_id WHERE i.issue_id = ? OR i.parent_id = ? ORDER BY (CASE WHEN i.issue_id = ? THEN 1 ELSE 0 END) DESC, i.created_at ASC");
     $rStmt->execute([$rootParentId, $rootParentId, $rootParentId]);
     $roster = $rStmt->fetchAll();
 }
@@ -174,6 +174,7 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
                     <th scope="col">Reporter</th>
                     <th scope="col">Contact</th>
                     <th scope="col">Ticket #</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Reported</th>
                     <th scope="col">Role in cluster</th>
                   </tr>
@@ -184,6 +185,12 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
                     <td class="issue-title"><?= htmlspecialchars($rep['full_name'] ?? 'Unknown') ?><div class="muted-note"><?= htmlspecialchars($rep['department'] ?? 'Student') ?></div></td>
                     <td class="text-muted"><?= htmlspecialchars($rep['email'] ?? '—') ?><?php if(!empty($rep['phone'])): ?><br><?= htmlspecialchars($rep['phone']) ?><?php endif; ?></td>
                     <td><span class="issue-id">#<?= $rep['issue_id'] ?></span></td>
+                    <td>
+                      <?= getStatusBadge($rep['status']) ?>
+                      <?php if(!empty($rep['reopen_count']) && $rep['reopen_count'] > 0): ?>
+                        <span class="badge badge-amber" style="font-size:10px;margin-left:4px;" title="Re-opened by reporter"><i class="bi bi-arrow-counterclockwise"></i> Reopened</span>
+                      <?php endif; ?>
+                    </td>
                     <td class="text-muted"><?= date('d M Y, h:i A', strtotime($rep['created_at'])) ?></td>
                     <td>
                       <?php if ($rep['issue_id'] == $rootParentId): ?>

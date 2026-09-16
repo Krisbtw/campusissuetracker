@@ -11,30 +11,46 @@ $id = intval($_GET['id'] ?? 0);
 
 // Handle Student Star Rating & Feedback Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'submit_feedback') {
-    $rating = intval($_POST['rating'] ?? 0);
+    $rawRating = $_POST['rating'] ?? '';
+    $rating = ($rawRating !== '' && is_numeric($rawRating)) ? intval($rawRating) : null;
     $feedback = trim($_POST['feedback'] ?? '');
     
-    if ($rating < 1 || $rating > 5) {
-        $_SESSION['flash_error'] = 'Please select a star rating between 1 and 5.';
+    if ($rating !== null && ($rating < 1 || $rating > 5)) {
+        $_SESSION['flash_error'] = 'Please select a valid star rating between 1 and 5, or submit without rating.';
     } else {
-        $stmt = $pdo->prepare("UPDATE issues SET rating = ?, feedback = ?, feedback_at = NOW(), status = 'closed', updated_at = NOW() WHERE issue_id = ? AND reported_by = ?");
-        $stmt->execute([$rating, $feedback, $id, $u['id']]);
+        if ($rating !== null) {
+            $stmt = $pdo->prepare("UPDATE issues SET rating = ?, feedback = ?, feedback_at = NOW(), status = 'closed', updated_at = NOW() WHERE issue_id = ? AND reported_by = ?");
+            $stmt->execute([$rating, $feedback ?: null, $id, $u['id']]);
+            $remark = "Student rated {$rating}/5" . ($feedback ? ": {$feedback}" : '');
+        } else {
+            $stmt = $pdo->prepare("UPDATE issues SET rating = NULL, feedback = ?, feedback_at = " . ($feedback ? "NOW()" : "NULL") . ", status = 'closed', updated_at = NOW() WHERE issue_id = ? AND reported_by = ?");
+            $stmt->execute([$feedback ?: null, $id, $u['id']]);
+            $remark = "Student verified resolution and closed ticket" . ($feedback ? ": {$feedback}" : '');
+        }
         
-        logStatusChange($pdo, $id, $u['id'], 'resolved', 'closed', "Student rated {$rating}/5: {$feedback}");
+        logStatusChange($pdo, $id, $u['id'], 'resolved', 'closed', $remark);
         
         $cCheck = $pdo->prepare("SELECT assigned_to, title FROM issues WHERE issue_id = ?");
         $cCheck->execute([$id]);
         $issData = $cCheck->fetch();
 
         if (!empty($issData['assigned_to'])) {
-            sendNotification($pdo, $issData['assigned_to'], $id, "🌟 Student {$u['name']} rated resolution {$rating}/5 stars on issue #{$id}!", 'success');
+            $msg = ($rating !== null) 
+                ? "🌟 Student {$u['name']} rated resolution {$rating}/5 stars on issue #{$id}!"
+                : "Student {$u['name']} verified and closed issue #{$id}.";
+            sendNotification($pdo, $issData['assigned_to'], $id, $msg, 'success');
         }
         $admins = $pdo->query("SELECT user_id FROM users WHERE role='admin'")->fetchAll();
         foreach ($admins as $admin) {
-            sendNotification($pdo, $admin['user_id'], $id, "Issue #{$id} was rated {$rating}/5 by {$u['name']} and automatically closed.", 'info');
+            $msg = ($rating !== null)
+                ? "Issue #{$id} was rated {$rating}/5 by {$u['name']} and closed."
+                : "Issue #{$id} was verified and closed by {$u['name']}.";
+            sendNotification($pdo, $admin['user_id'], $id, $msg, 'info');
         }
         
-        $_SESSION['flash_success'] = 'Thank you for your rating and feedback! The issue has been marked as closed.';
+        $_SESSION['flash_success'] = ($rating !== null) 
+            ? 'Thank you for your rating and feedback! The issue has been marked as closed.'
+            : 'The issue has been marked as closed. Thank you for confirming!';
         header('Location: view_issue.php?id=' . $id);
         exit();
     }
@@ -117,18 +133,19 @@ $pageSubtitle = htmlspecialchars($issue['title']);
               
               <form method="POST" action="view_issue.php?id=<?= $id ?>">
                 <input type="hidden" name="action" value="submit_feedback">
-                <input type="hidden" name="rating" id="ratingValue" value="5" required>
+                <input type="hidden" name="rating" id="ratingValue" value="">
                 
                 <div class="star-rating-box" style="margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
                   <span style="font-size:13px;font-weight:600;color:var(--text-muted);">Your Rating:</span>
                   <div class="star-rating-buttons" id="starRatingGroup" style="display:inline-flex;gap:6px;">
                     <?php for($s=1; $s<=5; $s++): ?>
-                      <button type="button" class="star-btn" data-value="<?= $s ?>" onclick="setStarRating(<?= $s ?>)" aria-label="<?= $s ?> stars" style="background:none;border:none;font-size:24px;color:#f59e0b;cursor:pointer;padding:0;transition:transform 0.15s ease;">
-                        <i class="bi bi-star-fill" id="star_icon_<?= $s ?>"></i>
+                      <button type="button" class="star-btn" data-value="<?= $s ?>" onclick="setStarRating(<?= $s ?>)" aria-label="<?= $s ?> stars" style="background:none;border:none;font-size:24px;color:#d4c8b8;cursor:pointer;padding:0;transition:transform 0.15s ease;">
+                        <i class="bi bi-star" id="star_icon_<?= $s ?>"></i>
                       </button>
                     <?php endfor; ?>
                   </div>
-                  <span id="ratingDescription" style="font-size:13px;font-weight:600;color:var(--text-primary);padding:2px 8px;background:rgba(245,158,11,0.12);border-radius:6px;">5 - Excellent</span>
+                  <button type="button" id="clearRatingBtn" onclick="clearStarRating()" style="display:none;background:none;border:none;font-size:12px;color:var(--text-muted);cursor:pointer;text-decoration:underline;">Clear</button>
+                  <span id="ratingDescription" style="font-size:13px;font-weight:500;color:var(--text-muted);padding:2px 8px;background:rgba(0,0,0,0.04);border-radius:6px;">Click stars to rate (Optional)</span>
                 </div>
 
                 <div class="field-group">
@@ -137,8 +154,8 @@ $pageSubtitle = htmlspecialchars($issue['title']);
                 </div>
 
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                  <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check2-circle me-1"></i>Rate &amp; Close Ticket
+                  <button type="submit" id="submitFeedbackBtn" class="btn btn-primary">
+                    <i class="bi bi-check2-circle me-1"></i>Close &amp; Confirm Resolution
                   </button>
                   <button type="button" onclick="openReopenModal()" class="btn btn-secondary">
                     <i class="bi bi-arrow-counterclockwise me-1"></i>Issue Not Fixed (Reopen)
@@ -150,32 +167,52 @@ $pageSubtitle = htmlspecialchars($issue['title']);
           <?php endif; ?>
 
           <!-- Rating & Feedback Display (When Closed) -->
-          <?php if($issue['status'] === 'closed' && !empty($issue['rating'])): ?>
-          <div class="panel" style="border-left: 4px solid #f59e0b;">
-            <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
-                <span style="font-weight:600;">Resolution Quality Rating</span>
-              </div>
-              <span class="badge badge-emerald">Ticket Closed</span>
-            </div>
-            <div class="panel-body">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <div style="color:#f59e0b;font-size:20px;letter-spacing:3px;">
-                  <?= str_repeat('★', $issue['rating']) ?><?= str_repeat('☆', 5 - $issue['rating']) ?>
+          <?php if($issue['status'] === 'closed'): ?>
+            <?php if(!empty($issue['rating'])): ?>
+            <div class="panel" style="border-left: 4px solid #f59e0b;">
+              <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <i class="bi bi-star-fill" style="color:#f59e0b;"></i>
+                  <span style="font-weight:600;">Resolution Quality Rating</span>
                 </div>
-                <span style="font-weight:700;font-size:14px;color:var(--text-primary);"><?= $issue['rating'] ?> / 5 Stars</span>
-                <?php if(!empty($issue['feedback_at'])): ?>
-                  <span class="muted-note" style="font-size:11px;">&bull; Submitted <?= date('d M Y', strtotime($issue['feedback_at'])) ?></span>
+                <span class="badge badge-emerald">Ticket Closed</span>
+              </div>
+              <div class="panel-body">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <div style="color:#f59e0b;font-size:20px;letter-spacing:3px;">
+                    <?= str_repeat('★', $issue['rating']) ?><?= str_repeat('☆', 5 - $issue['rating']) ?>
+                  </div>
+                  <span style="font-weight:700;font-size:14px;color:var(--text-primary);"><?= $issue['rating'] ?> / 5 Stars</span>
+                  <?php if(!empty($issue['feedback_at'])): ?>
+                    <span class="muted-note" style="font-size:11px;">&bull; Submitted <?= date('d M Y', strtotime($issue['feedback_at'])) ?></span>
+                  <?php endif; ?>
+                </div>
+                <?php if(!empty($issue['feedback'])): ?>
+                  <p style="font-style:italic;color:var(--text-primary);margin:0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+                    "<?= htmlspecialchars($issue['feedback']) ?>"
+                  </p>
                 <?php endif; ?>
               </div>
-              <?php if(!empty($issue['feedback'])): ?>
-                <p style="font-style:italic;color:var(--text-primary);margin:0;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
-                  "<?= htmlspecialchars($issue['feedback']) ?>"
-                </p>
-              <?php endif; ?>
             </div>
-          </div>
+            <?php else: ?>
+            <div class="panel" style="border-left: 4px solid var(--emerald);">
+              <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <i class="bi bi-check-circle-fill" style="color:var(--emerald);"></i>
+                  <span style="font-weight:600;">Issue Resolution Verified</span>
+                </div>
+                <span class="badge badge-emerald">Ticket Closed</span>
+              </div>
+              <div class="panel-body">
+                <p class="muted-note" style="margin:0;">This ticket was verified and closed. No rating was submitted.</p>
+                <?php if(!empty($issue['feedback'])): ?>
+                  <p style="margin-top:8px;font-style:italic;color:var(--text-primary);padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+                    "<?= htmlspecialchars($issue['feedback']) ?>"
+                  </p>
+                <?php endif; ?>
+              </div>
+            </div>
+            <?php endif; ?>
           <?php endif; ?>
 
           <div class="panel">
@@ -448,8 +485,19 @@ const starLabels = {
 function setStarRating(val) {
   const hiddenInput = document.getElementById('ratingValue');
   const desc = document.getElementById('ratingDescription');
+  const submitBtn = document.getElementById('submitFeedbackBtn');
+  const clearBtn = document.getElementById('clearRatingBtn');
+
   if (hiddenInput) hiddenInput.value = val;
-  if (desc) desc.innerText = starLabels[val] || (val + ' Stars');
+  if (desc) {
+    desc.innerText = starLabels[val] || (val + ' Stars');
+    desc.style.color = 'var(--text-primary)';
+    desc.style.background = 'rgba(245,158,11,0.12)';
+  }
+  if (submitBtn) {
+    submitBtn.innerHTML = '<i class="bi bi-star-fill me-1"></i>Rate & Close Ticket (' + val + '★)';
+  }
+  if (clearBtn) clearBtn.style.display = 'inline';
 
   for (let i = 1; i <= 5; i++) {
     const icon = document.getElementById('star_icon_' + i);
@@ -459,8 +507,34 @@ function setStarRating(val) {
         icon.style.color = '#f59e0b';
       } else {
         icon.className = 'bi bi-star';
-        icon.style.color = '#64748b';
+        icon.style.color = '#d4c8b8';
       }
+    }
+  }
+}
+
+function clearStarRating() {
+  const hiddenInput = document.getElementById('ratingValue');
+  const desc = document.getElementById('ratingDescription');
+  const submitBtn = document.getElementById('submitFeedbackBtn');
+  const clearBtn = document.getElementById('clearRatingBtn');
+
+  if (hiddenInput) hiddenInput.value = '';
+  if (desc) {
+    desc.innerText = 'Click stars to rate (Optional)';
+    desc.style.color = 'var(--text-muted)';
+    desc.style.background = 'rgba(0,0,0,0.04)';
+  }
+  if (submitBtn) {
+    submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Close & Confirm Resolution';
+  }
+  if (clearBtn) clearBtn.style.display = 'none';
+
+  for (let i = 1; i <= 5; i++) {
+    const icon = document.getElementById('star_icon_' + i);
+    if (icon) {
+      icon.className = 'bi bi-star';
+      icon.style.color = '#d4c8b8';
     }
   }
 }
