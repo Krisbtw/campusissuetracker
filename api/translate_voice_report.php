@@ -1,12 +1,14 @@
 <?php
+ob_start();
 session_start();
 header('Content-Type: application/json');
 
-require_once '../includes/auth_check.php';
-require_once '../config/db.php';
+require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../config/db.php';
 
 // Ensure user is logged in
 if (!isLoggedIn()) {
+    ob_clean();
     echo json_encode(['error' => 'Unauthorized access. Please log in.']);
     exit();
 }
@@ -16,6 +18,7 @@ $rawText = trim($input['raw_text'] ?? $_POST['raw_text'] ?? '');
 $sourceLang = trim($input['language'] ?? $_POST['language'] ?? 'en-IN');
 
 if (empty($rawText)) {
+    ob_clean();
     echo json_encode(['error' => 'No speech input provided.']);
     exit();
 }
@@ -44,37 +47,44 @@ Return ONLY a valid JSON object (no markdown formatting, no backticks) with keys
 - priority (low, medium, high, or critical)
 - description (clear detailed description of the reported issue in English)";
 
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . $apiKey;
-    $postData = [
-        'contents' => [
-            [
-                'parts' => [
-                    ['text' => $prompt]
+    $models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+    foreach ($models as $m) {
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$m}:generateContent?key=" . $apiKey;
+        $postData = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
                 ]
             ]
-        ]
-    ];
+        ];
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    
-    $res = curl_exec($ch);
-    curl_close($ch);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        
+        $res = curl_exec($ch);
+        if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
+            @curl_close($ch);
+        }
 
-    if ($res) {
-        $jsonRes = json_decode($res, true);
-        $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
-        $text = preg_replace('/```json\s*/i', '', $text);
-        $text = preg_replace('/```\s*/i', '', $text);
-        $text = trim($text);
-        $parsed = json_decode($text, true);
-        if ($parsed && !empty($parsed['title'])) {
-            $extracted = $parsed;
+        if ($res) {
+            $jsonRes = json_decode($res, true);
+            $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $text = preg_replace('/```json\s*/i', '', $text);
+            $text = preg_replace('/```\s*/i', '', $text);
+            $text = trim($text);
+            $parsed = json_decode($text, true);
+            if ($parsed && !empty($parsed['title'])) {
+                $extracted = $parsed;
+                break;
+            }
         }
     }
 }
@@ -143,6 +153,7 @@ if (!$extracted) {
     ];
 }
 
+ob_clean();
 echo json_encode([
     'success' => true,
     'data'    => $extracted

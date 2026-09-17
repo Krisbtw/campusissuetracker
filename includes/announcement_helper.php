@@ -9,10 +9,10 @@ function renderActiveAnnouncement($pdo) {
         $announcement = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$announcement) return '';
 
-        $id = $announcement['id'];
+        $id = $announcement['announcement_id'] ?? $announcement['id'] ?? 0;
         $urgency = $announcement['urgency'] ?? 'info';
-        $title = $announcement['title'];
-        $message = $announcement['message'];
+        $title = $announcement['title'] ?? 'Notice';
+        $message = $announcement['message'] ?? '';
 
         $icon = 'bi-megaphone-fill';
         if ($urgency === 'critical') $icon = 'bi-exclamation-octagon-fill';

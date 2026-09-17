@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     department VARCHAR(100) DEFAULT NULL,
     phone VARCHAR(15) DEFAULT NULL,
     avatar VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Categories Table
@@ -40,10 +40,10 @@ CREATE TABLE IF NOT EXISTS issues (
     admin_remark TEXT DEFAULT NULL,
     rating SMALLINT DEFAULT NULL,
     feedback TEXT DEFAULT NULL,
-    feedback_at TIMESTAMP DEFAULT NULL,
+    feedback_at TIMESTAMPTZ DEFAULT NULL,
     resolution_image VARCHAR(500) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Announcements Table
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     urgency VARCHAR(20) DEFAULT 'info',
     created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     is_active SMALLINT DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. Issue Images Table
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS issue_images (
     image_id SERIAL PRIMARY KEY,
     issue_id INT NOT NULL REFERENCES issues(issue_id) ON DELETE CASCADE,
     image_path VARCHAR(500) NOT NULL,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 5. Status History Table
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS status_history (
     old_status VARCHAR(50) NOT NULL,
     new_status VARCHAR(50) NOT NULL,
     remarks TEXT DEFAULT NULL,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 6. Notifications Table
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     message TEXT NOT NULL,
     is_read SMALLINT NOT NULL DEFAULT 0,
     notif_type VARCHAR(50) DEFAULT 'info',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for performance

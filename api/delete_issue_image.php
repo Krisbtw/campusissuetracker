@@ -2,8 +2,8 @@
 session_start();
 header('Content-Type: application/json');
 
-require_once '../includes/auth_check.php';
-require_once '../config/db.php';
+require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../config/db.php';
 
 if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);

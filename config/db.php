@@ -4,6 +4,14 @@
  * Supports Supabase, Vercel, Neon, Docker, and local XAMPP/MySQL
  */
 
+// Set default timezone to Indian Standard Time (IST, UTC+5:30)
+date_default_timezone_set('Asia/Kolkata');
+
+// Suppress deprecation warnings on PHP 8.5+ to keep HTML/JSON clean
+if (defined('E_DEPRECATED')) {
+    error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+}
+
 // 1. Auto-load .env file if present in project root
 $envPath = __DIR__ . '/../.env';
 if (file_exists($envPath)) {
@@ -155,7 +163,9 @@ if (!function_exists('uploadToCloudinary')) {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);
-        curl_close($ch);
+        if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
+            curl_close($ch);
+        }
 
         if ($response) {
             $jsonResponse = json_decode($response, true);
@@ -182,7 +192,9 @@ if (!function_exists('uploadToCloudinary')) {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);
-        curl_close($ch);
+        if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
+            curl_close($ch);
+        }
 
         if ($response) {
             $jsonResponse = json_decode($response, true);
@@ -204,7 +216,9 @@ if (!function_exists('uploadToCloudinary')) {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);
-        curl_close($ch);
+        if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
+            curl_close($ch);
+        }
 
         if ($response) {
             $jsonResponse = json_decode($response, true);
@@ -255,6 +269,13 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
+
+    // Ensure database session timezone is set to Indian Standard Time (IST)
+    if ($driver === 'pgsql') {
+        $pdo->exec("SET TIME ZONE 'Asia/Kolkata'");
+    } else {
+        $pdo->exec("SET time_zone = '+05:30'");
+    }
 
     // Check if initial schema setup is needed
     if ($driver === 'pgsql') {
@@ -345,7 +366,7 @@ try {
                 $pdo->exec("ALTER TABLE issues ADD COLUMN feedback TEXT DEFAULT NULL");
             }
             if (!in_array('feedback_at', $issCols)) {
-                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback_at TIMESTAMP DEFAULT NULL");
+                $pdo->exec("ALTER TABLE issues ADD COLUMN feedback_at TIMESTAMPTZ DEFAULT NULL");
             }
             if (!in_array('resolution_image', $issCols)) {
                 $pdo->exec("ALTER TABLE issues ADD COLUMN resolution_image VARCHAR(500) DEFAULT NULL");
@@ -359,7 +380,7 @@ try {
                 urgency VARCHAR(20) DEFAULT 'info',
                 created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
                 is_active SMALLINT DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )");
         } else {
             $issCols = $pdo->query("SHOW COLUMNS FROM issues")->fetchAll(PDO::FETCH_COLUMN);

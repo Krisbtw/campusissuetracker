@@ -12,7 +12,7 @@ $msg = $err = '';
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     $delId = intval($_GET['delete']);
     try {
-        $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = ?");
+        $stmt = $pdo->prepare("DELETE FROM announcements WHERE announcement_id = ?");
         $stmt->execute([$delId]);
         $msg = 'Announcement deleted successfully.';
     } catch (Exception $e) {
@@ -25,7 +25,7 @@ if (isset($_GET['toggle']) && is_numeric($_GET['toggle']) && isset($_GET['status
     $toggleId = intval($_GET['toggle']);
     $newStatus = intval($_GET['status']) ? 1 : 0;
     try {
-        $stmt = $pdo->prepare("UPDATE announcements SET is_active = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE announcements SET is_active = ? WHERE announcement_id = ?");
         $stmt->execute([$newStatus, $toggleId]);
         $msg = 'Announcement status updated.';
     } catch (Exception $e) {
@@ -191,16 +191,17 @@ $pageSubtitle = 'Send campus-wide alerts and maintenance notices';
                           <span style="font-size:11px;opacity:0.7;">by <?= htmlspecialchars($a['creator_name'] ?? 'Admin') ?></span>
                         </td>
                         <td style="text-align:right;white-space:nowrap;">
+                          <?php $aid = $a['announcement_id'] ?? $a['id'] ?? 0; ?>
                           <?php if ($a['is_active']): ?>
-                            <a href="announcements.php?toggle=<?= $a['id'] ?>&status=0" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" title="Hide from dashboards">
+                            <a href="announcements.php?toggle=<?= $aid ?>&status=0" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" title="Hide from dashboards">
                               <i class="bi bi-eye-slash me-1"></i>Deactivate
                             </a>
                           <?php else: ?>
-                            <a href="announcements.php?toggle=<?= $a['id'] ?>&status=1" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" title="Show on dashboards">
+                            <a href="announcements.php?toggle=<?= $aid ?>&status=1" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" title="Show on dashboards">
                               <i class="bi bi-eye me-1"></i>Activate
                             </a>
                           <?php endif; ?>
-                          <a href="announcements.php?delete=<?= $a['id'] ?>" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:var(--rose);margin-left:4px;" onclick="return confirm('Are you sure you want to permanently delete this broadcast?');" title="Delete">
+                          <a href="announcements.php?delete=<?= $aid ?>" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:var(--rose);margin-left:4px;" onclick="return confirm('Are you sure you want to permanently delete this broadcast?');" title="Delete">
                             <i class="bi bi-trash3"></i>
                           </a>
                         </td>

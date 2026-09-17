@@ -296,7 +296,14 @@ async function sendAiMessage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: msg })
     });
-    const resData = await response.json();
+    const text = await response.text();
+    let resData;
+    try {
+      resData = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('AI chat non-JSON response:', text);
+      throw new Error('Server returned an invalid response. Please try again or use the manual form.');
+    }
     document.getElementById(loadingId)?.remove();
 
     if (resData.success && resData.data) {
@@ -328,7 +335,7 @@ async function sendAiMessage() {
     chatWin.insertAdjacentHTML('beforeend', `
       <div class="chat-msg">
         <div class="chat-avatar">AI</div>
-        <div class="chat-bubble is-error">Something went wrong reaching the AI assistant. Please try again.</div>
+        <div class="chat-bubble is-error">${escapeHtml(err.message || 'Something went wrong reaching the AI assistant. Please try again.')}</div>
       </div>`);
   } finally {
     btnSend.disabled = false;
