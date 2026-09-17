@@ -9,7 +9,9 @@ function renderActiveAnnouncement($pdo) {
         $announcement = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$announcement) return '';
 
-        $id = $announcement['announcement_id'] ?? $announcement['id'] ?? 0;
+        $id = (int)($announcement['announcement_id'] ?? $announcement['id'] ?? 0);
+        $user = currentUser();
+        $dismissKey = 'fmc_announcement_dismissed_' . (int)$user['id'] . '_' . $id;
         $urgency = $announcement['urgency'] ?? 'info';
         $title = $announcement['title'] ?? 'Notice';
         $message = $announcement['message'] ?? '';
@@ -20,7 +22,7 @@ function renderActiveAnnouncement($pdo) {
 
         ob_start();
         ?>
-        <div class="announcement-banner <?= htmlspecialchars($urgency) ?> fade-in-up" id="announcementBanner_<?= $id ?>" style="display:none;">
+        <div class="announcement-banner <?= htmlspecialchars($urgency) ?> fade-in-up" id="announcementBanner_<?= $id ?>" style="display:flex;">
           <div class="announcement-content">
             <div style="font-size: 22px; display: flex; align-items: center; flex-shrink: 0;">
               <i class="bi <?= $icon ?>"></i>
@@ -35,27 +37,33 @@ function renderActiveAnnouncement($pdo) {
               </div>
             </div>
           </div>
-          <button type="button" class="announcement-dismiss" onclick="dismissAnnouncement(<?= $id ?>)" aria-label="Dismiss notice">
+          <button type="button" class="announcement-dismiss" id="announcementDismiss_<?= $id ?>" aria-label="Dismiss notice">
             <i class="bi bi-x"></i>
           </button>
         </div>
         <script>
         (function() {
           const aid = <?= $id ?>;
-          if (!sessionStorage.getItem('fmc_announcement_dismissed_' + aid)) {
-            const el = document.getElementById('announcementBanner_' + aid);
-            if (el) el.style.display = 'flex';
-          }
-        })();
-        function dismissAnnouncement(aid) {
-          sessionStorage.setItem('fmc_announcement_dismissed_' + aid, 'true');
+          const dismissKey = <?= json_encode($dismissKey) ?>;
           const el = document.getElementById('announcementBanner_' + aid);
-          if (el) {
+          const button = document.getElementById('announcementDismiss_' + aid);
+          if (!el || !button) return;
+          try {
+            if (sessionStorage.getItem(dismissKey)) el.style.display = 'none';
+          } catch (error) {
+            // Keep notices visible when browser storage is unavailable.
+          }
+          button.addEventListener('click', function() {
+            try {
+              sessionStorage.setItem(dismissKey, 'true');
+            } catch (error) {
+              // Dismiss this view even if the preference cannot be stored.
+            }
             el.style.opacity = '0';
             el.style.transform = 'translateY(-8px)';
             setTimeout(() => el.remove(), 250);
-          }
-        }
+          });
+        })();
         </script>
         <?php
         return ob_get_clean();

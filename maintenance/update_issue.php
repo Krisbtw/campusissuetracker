@@ -105,6 +105,19 @@ if ($rootParentId > 0) {
 $history = $pdo->prepare("SELECT sh.*,u.full_name FROM status_history sh LEFT JOIN users u ON sh.changed_by=u.user_id WHERE sh.issue_id=? ORDER BY sh.changed_at ASC"); $history->execute([$id]); $history=$history->fetchAll();
 $statusColors=['pending'=>'var(--status-pending)','in_progress'=>'var(--status-progress)','resolved'=>'var(--status-resolved)','closed'=>'var(--status-closed)','rejected'=>'var(--status-rejected)'];
 
+// Reopening keeps the workflow status in_progress; expose its context in the description.
+$reopenCount = (int)($issue['reopen_count'] ?? 0);
+$isReopened = $reopenCount > 0 && $issue['status'] === 'in_progress';
+$latestReopen = null;
+if ($reopenCount > 0) {
+    foreach (array_reverse($history) as $entry) {
+        if ($entry['old_status'] === 'resolved' && $entry['new_status'] === 'in_progress') {
+            $latestReopen = $entry;
+            break;
+        }
+    }
+}
+
 // Roster Query for Duplicate Incident Cluster
 $roster = [];
 if ($rootParentId > 0) {
@@ -154,6 +167,22 @@ $pageTitle='Update Issue #'.$id; $pageSubtitle=htmlspecialchars($issue['title'])
                 <div class="meta-tile"><div class="meta-label">Category</div><div class="meta-value"><?= htmlspecialchars($issue['category_name']??'N/A') ?></div></div>
                 <div class="meta-tile"><div class="meta-label">Location</div><div class="meta-value"><?= htmlspecialchars($issue['location']) ?></div></div>
               </div>
+              <?php if ($reopenCount > 0): ?>
+              <div class="meta-tile" style="margin-bottom:16px;border-left:4px solid var(--amber);" role="status">
+                <div style="margin-bottom:8px;">
+                  <span class="badge badge-amber"><i class="bi bi-arrow-counterclockwise me-1"></i><?= $isReopened ? 'Reopened' : 'Previously reopened' ?></span>
+                  <span class="muted-note">Reopened <?= $reopenCount ?> <?= $reopenCount === 1 ? 'time' : 'times' ?></span>
+                </div>
+                <?php if ($isReopened): ?>
+                  <div style="margin-bottom:8px;">This issue was reopened because the problem was reported as not fixed. Please review the reopening note before updating it.</div>
+                <?php endif; ?>
+                <?php if ($latestReopen): ?>
+                  <div class="meta-label" style="margin-bottom:5px;">Latest reopening note</div>
+                  <div style="line-height:1.75;overflow-wrap:anywhere;"><?= nl2br(htmlspecialchars($latestReopen['remarks'] ?? '')) ?></div>
+                  <div class="muted-note" style="margin-top:6px;">By <?= htmlspecialchars($latestReopen['full_name'] ?? 'Reporter') ?> &bull; <?= date('d M Y, h:i A', strtotime($latestReopen['changed_at'])) ?></div>
+                <?php endif; ?>
+              </div>
+              <?php endif; ?>
               <div style="margin-bottom:16px;"><div class="meta-label" style="margin-bottom:8px;">Description</div><div style="line-height:1.75;"><?= nl2br(htmlspecialchars($issue['description'])) ?></div></div>
               <?php if($issue['admin_remark']): ?><div class="meta-tile"><div class="meta-label" style="margin-bottom:5px;">Admin instruction</div><div class="muted-note"><?= nl2br(htmlspecialchars($issue['admin_remark'])) ?></div></div><?php endif; ?>
             </div>

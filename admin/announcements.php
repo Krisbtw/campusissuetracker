@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch all announcements
 try {
     $announcements = $pdo->query("
-        SELECT a.*, u.name as creator_name 
+        SELECT a.*, u.full_name as creator_name
         FROM announcements a
         LEFT JOIN users u ON a.created_by = u.user_id
         ORDER BY a.created_at DESC
