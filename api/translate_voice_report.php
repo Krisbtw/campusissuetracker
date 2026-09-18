@@ -28,7 +28,14 @@ if (empty($rawText)) {
 // Fetch categories from DB
 $categories = $pdo->query("SELECT category_id, category_name FROM categories")->fetchAll();
 
-$apiKey = getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? ''));
+$apiKey = getenv('GEMINI_API_KEY');
+if (empty($apiKey) && isset($_ENV['GEMINI_API_KEY']) && is_string($_ENV['GEMINI_API_KEY'])) {
+    $apiKey = $_ENV['GEMINI_API_KEY'];
+}
+if (empty($apiKey) && isset($_SERVER['GEMINI_API_KEY']) && is_string($_SERVER['GEMINI_API_KEY'])) {
+    $apiKey = $_SERVER['GEMINI_API_KEY'];
+}
+$apiKey = is_string($apiKey) ? trim($apiKey) : '';
 $extracted = null;
 
 if (!empty($apiKey)) {

@@ -24,7 +24,9 @@ if (file_exists($envPath)) {
             $key = trim($key);
             $val = trim($val);
             $val = trim($val, "\"'");
-            if (!array_key_exists($key, $_SERVER) && !array_key_exists($key, $_ENV)) {
+            $hasServerVal = array_key_exists($key, $_SERVER) && is_string($_SERVER[$key]) && strlen(trim($_SERVER[$key])) > 0;
+            $hasEnvVal = array_key_exists($key, $_ENV) && is_string($_ENV[$key]) && strlen(trim($_ENV[$key])) > 0;
+            if (!$hasServerVal && !$hasEnvVal) {
                 putenv("{$key}={$val}");
                 $_ENV[$key] = $val;
                 $_SERVER[$key] = $val;

@@ -533,24 +533,10 @@ async function toggleVoiceRecording() {
   if (!SpeechRecognition) {
     if (status) {
       status.className = 'status-text is-error';
-      status.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Web Speech is not supported in this browser. Click "Type / Dictate" to enter your issue.';
+      status.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Web Speech is not supported in this browser. Dictate panel opened below:';
     }
+    toggleDictationPanel(true);
     return;
-  }
-
-  // Pre-request and immediately release microphone permission to ensure clean hardware access
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    try {
-      const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      testStream.getTracks().forEach(track => track.stop());
-    } catch (permErr) {
-      console.warn('Microphone permission warning:', permErr);
-      if (status) {
-        status.className = 'status-text is-error';
-        status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Microphone access blocked. Please allow microphone permission in your browser address bar.';
-      }
-      return;
-    }
   }
 
   if (recognition) {
@@ -562,83 +548,111 @@ async function toggleVoiceRecording() {
   let speechLocale = selectedVal;
   if (selectedVal === 'kok-IN') speechLocale = 'hi-IN';
 
+  let hasAttemptedFallback = false;
   let capturedTranscript = '';
 
-  try {
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognition.lang = speechLocale;
+  function startRecognition(localeToUse) {
+    try {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.lang = localeToUse;
 
-    recognition.onstart = function() {
-      isRecording = true;
-      const btn = document.getElementById('btnVoiceRecord');
-      const icon = document.getElementById('micIcon');
-      const text = document.getElementById('micText');
+      recognition.onstart = function() {
+        isRecording = true;
+        const btn = document.getElementById('btnVoiceRecord');
+        const icon = document.getElementById('micIcon');
+        const text = document.getElementById('micText');
 
-      if (btn) {
-        btn.classList.add('is-recording');
-        icon.className = 'bi bi-record-fill';
-        text.innerText = 'Listening… (Click to finish)';
-      }
-      if (status) {
-        status.className = 'status-text is-recording';
-        status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening live… speak your issue details now.';
-      }
-    };
+        if (btn) {
+          btn.classList.add('is-recording');
+          icon.className = 'bi bi-record-fill';
+          text.innerText = 'Listening… (Click to finish)';
+        }
+        if (status) {
+          status.className = 'status-text is-recording';
+          status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening live… speak your issue details now.';
+        }
+      };
 
-    recognition.onresult = function(event) {
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcriptPart = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          capturedTranscript += ' ' + transcriptPart;
-        } else {
-          if (status) {
-            status.className = 'status-text is-recording';
-            status.innerHTML = `<i class="bi bi-soundwave me-1"></i> "${escapeHtml(transcriptPart)}"`;
+      recognition.onresult = function(event) {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcriptPart = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            capturedTranscript += ' ' + transcriptPart;
+          } else {
+            if (status) {
+              status.className = 'status-text is-recording';
+              status.innerHTML = `<i class="bi bi-soundwave me-1"></i> "${escapeHtml(transcriptPart)}"`;
+            }
           }
         }
-      }
-    };
+      };
 
-    recognition.onerror = function(event) {
-      console.error('Speech recognition error:', event.error);
-      resetVoiceBtn();
+      recognition.onerror = function(event) {
+        console.warn('Speech recognition event error:', event.error);
 
-      if (status) {
-        if (event.error === 'no-speech') {
-          status.className = 'status-text is-busy';
-          status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> No speech detected. Click "Speak & auto-fill" and speak into your mic.';
-        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          status.className = 'status-text is-error';
-          status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Microphone permission denied. Click the lock icon in the address bar to allow mic access.';
-        } else if (event.error === 'network') {
-          status.className = 'status-text is-busy';
-          status.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Speech service could not connect over this network. Click "Type / Dictate" to enter your issue.';
-        } else {
-          status.className = 'status-text is-error';
-          status.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Speech error (${escapeHtml(event.error)}). Click "Type / Dictate" to enter your issue.`;
+        // If network error occurred on localized language, auto-retry once with en-US
+        if (event.error === 'network' && !hasAttemptedFallback && localeToUse !== 'en-US') {
+          hasAttemptedFallback = true;
+          if (status) {
+            status.className = 'status-text is-busy';
+            status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Retrying speech service with standard English…';
+          }
+          try { recognition.abort(); } catch(e){}
+          setTimeout(() => {
+            startRecognition('en-US');
+          }, 300);
+          return;
         }
-      }
-    };
 
-    recognition.onend = function() {
+        resetVoiceBtn();
+
+        if (status) {
+          if (event.error === 'no-speech') {
+            status.className = 'status-text is-busy';
+            status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> No speech detected. Click "Speak & auto-fill" and speak clearly into your mic.';
+          } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            status.className = 'status-text is-error';
+            status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Microphone permission blocked. Click the lock icon in the browser address bar to allow mic access.';
+          } else if (event.error === 'network') {
+            status.className = 'status-text is-busy';
+            status.innerHTML = '<i class="bi bi-mic-fill me-1" style="color:var(--primary);"></i> Speech cloud blocked on this network. Assistant opened below — speak with <kbd>Win + H</kbd> or type.';
+            // Automatically open assistive dictation panel with guidance
+            const notice = document.getElementById('dictationHelpNotice');
+            if (notice) {
+              notice.innerHTML = `<span style="color:var(--burg,#7b1e2b);font-weight:600;"><i class="bi bi-wifi-off me-1"></i> Google speech cloud is blocked by your network/firewall.</span><br>Use Windows Voice Typing (<kbd style="background:var(--border, #e2e8f0);padding:2px 6px;border-radius:4px;font-size:11px;">Win + H</kbd>) to dictate in any language, or type details below and click <strong>Auto-fill Form</strong>:`;
+            }
+            toggleDictationPanel(true);
+          } else {
+            status.className = 'status-text is-error';
+            status.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Speech error (${escapeHtml(event.error)}). Assistant opened below:`;
+            toggleDictationPanel(true);
+          }
+        }
+      };
+
+      recognition.onend = function() {
+        resetVoiceBtn();
+        if (capturedTranscript && capturedTranscript.trim()) {
+          processSpeechTranscript(capturedTranscript.trim(), selectedVal);
+        }
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('Recognition start error:', err);
       resetVoiceBtn();
-      if (capturedTranscript && capturedTranscript.trim()) {
-        processSpeechTranscript(capturedTranscript.trim(), selectedVal);
+      if (status) {
+        status.className = 'status-text is-error';
+        status.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Could not start speech engine. Assistant opened below:';
       }
-    };
-
-    recognition.start();
-  } catch (err) {
-    console.error('Recognition start error:', err);
-    resetVoiceBtn();
-    if (status) {
-      status.className = 'status-text is-error';
-      status.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Could not start speech engine. Click "Type / Dictate" to enter your issue.';
+      toggleDictationPanel(true);
     }
   }
+
+  startRecognition(speechLocale);
 }
 
 let selectedUploadFiles = [];
