@@ -1,9 +1,14 @@
 <?php
-session_start();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
+
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true) ?: [];
+if (!empty($input)) {
+    ensureSession($input);
+}
 
 if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);
@@ -11,7 +16,6 @@ if (!isLoggedIn()) {
 }
 
 $u = currentUser();
-$input = json_decode(file_get_contents('php://input'), true);
 $imageId = intval($input['image_id'] ?? $_POST['image_id'] ?? 0);
 
 if ($imageId <= 0) {

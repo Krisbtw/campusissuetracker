@@ -1,25 +1,29 @@
 <?php
 ob_start();
-session_start();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
 
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true) ?: [];
+if (!empty($input)) {
+    ensureSession($input);
+}
+
 // Ensure user is logged in
 if (!isLoggedIn()) {
     ob_clean();
-    echo json_encode(['error' => 'Unauthorized access. Please log in.']);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);
     exit();
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
 $rawText = trim($input['raw_text'] ?? $_POST['raw_text'] ?? '');
 $sourceLang = trim($input['language'] ?? $_POST['language'] ?? 'en-IN');
 
 if (empty($rawText)) {
     ob_clean();
-    echo json_encode(['error' => 'No speech input provided.']);
+    echo json_encode(['success' => false, 'error' => 'No speech input provided.']);
     exit();
 }
 

@@ -80,8 +80,11 @@ if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off') {
 // Switch working directory to target file's directory so relative includes (e.g. '../config/db.php') resolve properly
 chdir(dirname($realTarget));
 
-// Ensure default response header is text/html for PHP pages
-header('Content-Type: text/html; charset=UTF-8');
+// Only set default text/html header if not routing to an API script
+$isApiScript = (strpos($realTarget, DIRECTORY_SEPARATOR . 'api' . DIRECTORY_SEPARATOR) !== false || strpos($realTarget, '/api/') !== false);
+if (!$isApiScript) {
+    header('Content-Type: text/html; charset=UTF-8');
+}
 
 // Execute the requested PHP script
 require $realTarget;

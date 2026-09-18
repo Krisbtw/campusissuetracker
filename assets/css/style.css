@@ -1692,7 +1692,7 @@ input:user-invalid, textarea:user-invalid, select:user-invalid { border-color: v
 }
 
 @media print {
-  .sidebar, .topbar, .filter-bar, .btn, .btn-sm-icon, .announcement-banner, .toast-container, .ambient-canvas, .search-modal {
+  .sidebar, .topbar, .filter-bar, .btn, .btn-sm-icon, .announcement-banner, .announcement-restore, .toast-container, .ambient-canvas, .search-modal {
     display: none !important;
   }
   .app-wrapper {

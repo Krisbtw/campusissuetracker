@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     urgency ENUM('info','warning','critical') NOT NULL DEFAULT 'info',
     created_by INT(11) NOT NULL,
     is_active TINYINT(1) DEFAULT 1,
+    expires_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (announcement_id),
     KEY fk_ann_creator (created_by),

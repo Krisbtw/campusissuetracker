@@ -8,10 +8,16 @@ $isAdmin = $u['role'] === 'admin';
 $isMaint = $u['role'] === 'maintenance';
 $base = BASE_URL;
 
+$activeAnnounceCount = 0;
+try {
+    $activeAnnounceCount = (int)$pdo->query("SELECT COUNT(*) FROM announcements WHERE is_active = 1 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)")->fetchColumn();
+} catch(Exception $e) {}
+
 $reporterMenu = [
   ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard', 'href' => $base . 'reporter/dashboard.php'],
   ['icon' => 'bi-plus-circle-fill', 'label' => 'Report Issue', 'href' => $base . 'reporter/report_issue.php'],
   ['icon' => 'bi-card-checklist', 'label' => 'My Issues', 'href' => $base . 'reporter/my_issues.php'],
+  ['icon' => 'bi-megaphone-fill', 'label' => 'Announcements', 'href' => $base . 'reporter/announcements.php', 'badge' => $activeAnnounceCount],
   ['icon' => 'bi-bell-fill', 'label' => 'Notifications', 'href' => $base . 'reporter/notifications.php', 'badge' => $unread],
 ];
 
@@ -34,6 +40,7 @@ $adminMenu = [
 $maintMenu = [
   ['icon' => 'bi-grid-1x2-fill', 'label' => 'Dashboard', 'href' => $base . 'maintenance/dashboard.php'],
   ['icon' => 'bi-tools', 'label' => 'My Assignments', 'href' => $base . 'maintenance/my_assignments.php'],
+  ['icon' => 'bi-megaphone-fill', 'label' => 'Announcements', 'href' => $base . 'reporter/announcements.php', 'badge' => $activeAnnounceCount],
   ['icon' => 'bi-bell-fill', 'label' => 'Notifications', 'href' => $base . 'maintenance/notifications.php', 'badge' => $unread],
 ];
 

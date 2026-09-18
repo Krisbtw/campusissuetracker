@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     urgency VARCHAR(20) DEFAULT 'info',
     created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     is_active SMALLINT DEFAULT 1,
+    expires_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

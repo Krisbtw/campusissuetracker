@@ -1,8 +1,5 @@
 <?php
 ob_start();
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 header('Content-Type: application/json; charset=utf-8');
 
 // Suppress deprecations to ensure JSON purity
@@ -14,6 +11,13 @@ require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
 
 try {
+    // Read input and restore session from body token, cookie, or header
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?: [];
+    if (!empty($input)) {
+        ensureSession($input);
+    }
+
     // Ensure user is logged in
     if (!isLoggedIn()) {
         ob_clean();
@@ -21,7 +25,6 @@ try {
         exit();
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
     $message = trim($input['message'] ?? $_POST['message'] ?? '');
 
     if (empty($message)) {

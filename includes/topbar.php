@@ -10,22 +10,30 @@ $searchUrl=$base.($role==='admin'?'admin/issues.php':'reporter/my_issues.php');
 $notifs=getNotifications($pdo,$u['id'],5);
 $isAdmin=$role==='admin';
 $isMaint=$role==='maintenance';
+$activeAnnounceCount = 0;
+try {
+    $activeAnnounceCount = (int)$pdo->query("SELECT COUNT(*) FROM announcements WHERE is_active = 1 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)")->fetchColumn();
+} catch(Exception $e) {}
+
 $reporterMenu=[
   ['label'=>'Dashboard','href'=>$base.'reporter/dashboard.php'],
   ['label'=>'Report Issue','href'=>$base.'reporter/report_issue.php'],
   ['label'=>'My Issues','href'=>$base.'reporter/my_issues.php'],
+  ['label'=>'Announcements','href'=>$base.'reporter/announcements.php','badge'=>$activeAnnounceCount],
   ['label'=>'Notifications','href'=>$base.'reporter/notifications.php','badge'=>$unread],
 ];
 $adminMenu=[
   ['label'=>'Dashboard','href'=>$base.'admin/dashboard.php'],
   ['label'=>'All Issues','href'=>$base.'admin/issues.php'],
   ['label'=>'Users','href'=>$base.'admin/users.php'],
+  ['label'=>'Announcements','href'=>$base.'admin/announcements.php'],
   ['label'=>'Reports','href'=>$base.'admin/reports.php'],
   ['label'=>'Notifications','href'=>$base.'admin/notifications.php','badge'=>$unread],
 ];
 $maintMenu=[
   ['label'=>'Dashboard','href'=>$base.'maintenance/dashboard.php'],
   ['label'=>'My Assignments','href'=>$base.'maintenance/my_assignments.php'],
+  ['label'=>'Announcements','href'=>$base.'reporter/announcements.php','badge'=>$activeAnnounceCount],
   ['label'=>'Notifications','href'=>$base.'maintenance/notifications.php','badge'=>$unread],
 ];
 $navMenu=$isAdmin?$adminMenu:($isMaint?$maintMenu:$reporterMenu);
@@ -117,6 +125,7 @@ $currentFile=basename($_SERVER['PHP_SELF']);
   </div>
 </div>
 <script>
+window.FMC_AUTH_TOKEN = <?= json_encode(generateAuthToken($u)) ?>;
 function toggleNotif(){
   document.getElementById('notifDropdown').classList.toggle('show');
   document.getElementById('userDropdownMenu')?.classList.remove('show');

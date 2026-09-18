@@ -450,8 +450,15 @@ async function deleteIssueImage(imageId) {
   try {
     const res = await fetch('../api/delete_issue_image.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image_id: imageId })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Auth-Token': window.FMC_AUTH_TOKEN || ''
+      },
+      credentials: 'include',
+      body: JSON.stringify({ 
+        image_id: imageId,
+        auth_token: window.FMC_AUTH_TOKEN || ''
+      })
     });
     const data = await res.json();
     if (data.success) {

@@ -789,6 +789,34 @@
   transform: scale(1.1);
 }
 
+/* Re-open pill shown after an announcement is dismissed */
+.announcement-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border, #d4c8b8);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: var(--text, #2b0d0d);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.announcement-restore:hover {
+  background: var(--surface-hover, #f7f3ec);
+  border-color: var(--border-strong, #bfae94);
+}
+
+.announcement-restore i {
+  font-size: 14px;
+  color: var(--primary, #7b1e2b);
+}
+
 /* -------------------------------------------------------------
    15. shadcn/ui & 21st.dev: Custom Select & Modern Dropdowns
    ------------------------------------------------------------- */

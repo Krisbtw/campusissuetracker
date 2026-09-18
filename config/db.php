@@ -380,8 +380,15 @@ try {
                 urgency VARCHAR(20) DEFAULT 'info',
                 created_by INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
                 is_active SMALLINT DEFAULT 1,
+                expires_at TIMESTAMPTZ DEFAULT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )");
+
+            $annColsStmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'announcements'");
+            $annCols = $annColsStmt ? $annColsStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+            if (!in_array('expires_at', $annCols)) {
+                $pdo->exec("ALTER TABLE announcements ADD COLUMN expires_at TIMESTAMPTZ DEFAULT NULL");
+            }
         } else {
             $issCols = $pdo->query("SHOW COLUMNS FROM issues")->fetchAll(PDO::FETCH_COLUMN);
             if (!in_array('rating', $issCols)) {
@@ -405,11 +412,17 @@ try {
                 urgency ENUM('info','warning','critical') NOT NULL DEFAULT 'info',
                 created_by INT(11) NOT NULL,
                 is_active TINYINT(1) DEFAULT 1,
+                expires_at DATETIME DEFAULT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (announcement_id),
                 KEY fk_ann_creator (created_by),
                 CONSTRAINT fk_ann_creator FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            $annCols = $pdo->query("SHOW COLUMNS FROM announcements")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('expires_at', $annCols)) {
+                $pdo->exec("ALTER TABLE announcements ADD COLUMN expires_at DATETIME DEFAULT NULL AFTER is_active");
+            }
         }
     } catch (Exception $ex) {
         // Continue if columns exist or ALTER restricted

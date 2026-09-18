@@ -247,6 +247,8 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
   </div>
 </div>
 <script>
+const FMC_AUTH_TOKEN = <?= json_encode(generateAuthToken($u)) ?>;
+window.FMC_AUTH_TOKEN = FMC_AUTH_TOKEN;
 let currentAiData = null;
 
 function switchReportMode(mode) {
@@ -293,8 +295,15 @@ async function sendAiMessage() {
   try {
     const response = await fetch('../api/ai_chat_reporter.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Auth-Token': FMC_AUTH_TOKEN
+      },
+      credentials: 'include',
+      body: JSON.stringify({ 
+        message: msg,
+        auth_token: FMC_AUTH_TOKEN
+      })
     });
     const text = await response.text();
     let resData;
@@ -415,8 +424,16 @@ function initSpeechRecognition() {
     try {
       const response = await fetch('../api/translate_voice_report.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw_text: transcript, language: langSelect })
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Auth-Token': FMC_AUTH_TOKEN
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          raw_text: transcript, 
+          language: langSelect,
+          auth_token: FMC_AUTH_TOKEN
+        })
       });
       const resData = await response.json();
 
@@ -486,8 +503,16 @@ function promptManualSpeechText() {
 
   fetch('../api/translate_voice_report.php', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw_text: userText.trim(), language: langSelect })
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Auth-Token': FMC_AUTH_TOKEN
+    },
+    credentials: 'include',
+    body: JSON.stringify({ 
+      raw_text: userText.trim(), 
+      language: langSelect,
+      auth_token: FMC_AUTH_TOKEN
+    })
   })
   .then(res => res.json())
   .then(resData => {
@@ -645,8 +670,11 @@ function checkSimilarIssuesDebounced() {
     }
 
     try {
-      const query = new URLSearchParams({ category_id: catId, location: loc, title: title });
-      const res = await fetch(`../api/check_similar_issues.php?${query.toString()}`);
+      const query = new URLSearchParams({ category_id: catId, location: loc, title: title, auth_token: FMC_AUTH_TOKEN });
+      const res = await fetch(`../api/check_similar_issues.php?${query.toString()}`, {
+        credentials: 'include',
+        headers: { 'X-Auth-Token': FMC_AUTH_TOKEN }
+      });
       const data = await res.json();
 
       if (data.success && data.count > 0) {

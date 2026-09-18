@@ -190,8 +190,12 @@
                        window.location.pathname.includes('/admin/')
                        ? '../api/poll_notifications.php'
                        : 'api/poll_notifications.php';
-
-      const res = await fetch(basePath);
+      const headers = {};
+      if (window.FMC_AUTH_TOKEN) {
+        headers['X-Auth-Token'] = window.FMC_AUTH_TOKEN;
+      }
+      const pollUrl = window.FMC_AUTH_TOKEN ? `${basePath}?auth_token=${encodeURIComponent(window.FMC_AUTH_TOKEN)}` : basePath;
+      const res = await fetch(pollUrl, { credentials: 'include', headers });
       if (!res.ok) return;
       const data = await res.json();
 

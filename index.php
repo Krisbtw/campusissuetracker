@@ -30,7 +30,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='login'){
       } else {
         $_SESSION['user_id']=$user['user_id'];$_SESSION['user_name']=$user['full_name'];
         $_SESSION['user_email']=$user['email'];$_SESSION['role']=$user['role'];
-        $_SESSION['department']=$user['department'];redirectToDashboard();
+        $_SESSION['department']=$user['department'];
+        setAuthCookie([
+          'id'         => $user['user_id'],
+          'name'       => $user['full_name'],
+          'email'      => $user['email'],
+          'role'       => $user['role'],
+          'department' => $user['department']
+        ]);
+        redirectToDashboard();
       }
     }else{$error='Invalid email or password.';}
   }

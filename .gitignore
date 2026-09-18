@@ -6,4 +6,5 @@ uploads/issues/*
 .vercel
 .env*
 !.env.example
+.agents/
 
