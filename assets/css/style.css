@@ -785,10 +785,13 @@ img { max-width: 100%; }
 .panel, .panel-burg, .card {
   min-width: 0;
   margin-bottom: 24px;
-  overflow: hidden;
+  overflow: visible;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
+}
+.panel:has(.table-responsive), .panel-table {
+  overflow: hidden;
 }
 .panel-header {
   display: flex;
@@ -802,13 +805,15 @@ img { max-width: 100%; }
   color: var(--text);
   font-size: var(--fs-lg);
   font-weight: 600;
+  border-top-left-radius: var(--r);
+  border-top-right-radius: var(--r);
 }
 .panel-header > i:first-child { display: none; }
 .panel-header a { font-size: var(--fs-sm); font-weight: 500; }
 .panel-body { padding: 20px 24px; }
 .content-grid, .detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 310px;
   align-items: start;
   gap: 24px;
 }

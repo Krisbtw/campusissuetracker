@@ -951,6 +951,19 @@ select option {
   transform: scale(1) translateY(0);
 }
 
+.shadcn-select-wrapper.open-up .shadcn-select-content {
+  top: auto;
+  bottom: calc(100% + 6px);
+  transform-origin: bottom center;
+  transform: scale(0.96) translateY(6px);
+}
+
+.shadcn-select-wrapper.open-up.open .shadcn-select-content {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1) translateY(0);
+}
+
 /* Dropdown Options */
 .shadcn-select-item {
   position: relative;

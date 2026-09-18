@@ -465,9 +465,20 @@
         if (!isOpen) {
           wrapper.classList.add('open');
           trigger.setAttribute('aria-expanded', 'true');
+
+          // Smart boundary check: open upwards if near bottom of viewport
+          const rect = trigger.getBoundingClientRect();
+          const spaceBelow = window.innerHeight - rect.bottom;
+          if (spaceBelow < 220 && rect.top > 220) {
+            wrapper.classList.add('open-up');
+          } else {
+            wrapper.classList.remove('open-up');
+          }
+
           const sel = content.querySelector('.shadcn-select-item.selected');
           if (sel) {
-            sel.scrollIntoView({ block: 'nearest' });
+            // Scroll ONLY the dropdown's internal scroll container, NEVER parent elements!
+            content.scrollTop = sel.offsetTop - (content.clientHeight / 2) + (sel.clientHeight / 2);
           }
         } else {
           closeDropdown();
@@ -476,6 +487,7 @@
 
       function closeDropdown() {
         wrapper.classList.remove('open');
+        wrapper.classList.remove('open-up');
         trigger.setAttribute('aria-expanded', 'false');
       }
 

@@ -231,16 +231,16 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <div class="panel">
+            <div class="panel" style="overflow: visible; position: relative; z-index: 30;">
               <div class="panel-header">Classification</div>
-              <div class="panel-body">
-                <div class="field-group"><label class="form-label" for="category_id">Category *</label>
+              <div class="panel-body" style="overflow: visible;">
+                <div class="field-group" style="position: relative; z-index: 25;"><label class="form-label" for="category_id">Category *</label>
                   <select id="category_id" name="category_id" class="form-control" required>
                     <option value="">-- Select category --</option>
                     <?php foreach($categories as $cat):?><option value="<?=$cat['category_id']?>"<?=($_POST['category_id']??'')==$cat['category_id']?' selected':''?>><?=htmlspecialchars($cat['category_name'])?></option><?php endforeach;?>
                   </select>
                 </div>
-                <div class="field-group" style="margin-bottom:0"><label class="form-label" for="priority">Priority *</label>
+                <div class="field-group" style="margin-bottom:0; position: relative; z-index: 20;"><label class="form-label" for="priority">Priority *</label>
                   <select id="priority" name="priority" class="form-control">
                     <option value="low"<?=($_POST['priority']??'medium')==='low'?' selected':''?>>Low — minor inconvenience</option>
                     <option value="medium"<?=($_POST['priority']??'medium')==='medium'?' selected':''?>>Medium — needs attention</option>
@@ -250,7 +250,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
                 </div>
               </div>
             </div>
-            <div class="panel">
+            <div class="panel" style="position: relative; z-index: 10;">
               <div class="panel-header">Priority guide</div>
               <div class="panel-body">
                 <div style="display:flex;flex-direction:column;gap:10px;font-size:var(--fs-sm);color:var(--text-muted);">
