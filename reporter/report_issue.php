@@ -157,7 +157,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
       <form method="POST" enctype="multipart/form-data">
         <div class="content-grid report-grid">
           <div>
-            <div class="voice-toolbar">
+            <div class="voice-toolbar" id="voiceToolbar">
               <div class="voice-controls">
                 <button type="button" id="btnVoiceRecord" class="btn btn-secondary" onclick="toggleVoiceRecording()">
                   <i class="bi bi-mic-fill" id="micIcon"></i>
@@ -169,8 +169,31 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
                   <option value="mr-IN">Marathi – मराठी</option>
                   <option value="kok-IN">Konkani – कोंकणी</option>
                 </select>
+                <button type="button" id="btnToggleDictation" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 12px;" onclick="toggleDictationPanel()" title="Open voice / dictation input box">
+                  <i class="bi bi-keyboard me-1"></i>Type / Dictate
+                </button>
               </div>
               <div id="voiceStatus" class="status-text"><i class="bi bi-translate me-1"></i>Speak in your language — auto-translated and filled into the form</div>
+            </div>
+
+            <!-- Inline Voice / Dictation Fallback & Quick Input Panel -->
+            <div id="voiceDictationPanel" class="panel fade-in-up" style="display:none; margin-bottom: 16px; padding: 16px 20px; border-left: 4px solid var(--primary, #7b1e2b); background: var(--surface); box-shadow: 0 4px 16px -2px rgba(0,0,0,0.06);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-mic-fill" style="color: var(--primary, #7b1e2b);"></i>
+                  <span>Voice Speech &amp; Auto-fill Assistant</span>
+                </div>
+                <button type="button" onclick="toggleDictationPanel(false)" style="background: none; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;" aria-label="Close panel"><i class="bi bi-x"></i></button>
+              </div>
+              <p id="dictationHelpNotice" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
+                Speak or paste issue details in any language (Hindi, Marathi, Konkani, or English). <span style="font-weight: 500; color: var(--text-primary);">Tip: Press <kbd style="background:var(--border, #e2e8f0);padding:2px 6px;border-radius:4px;font-size:11px;">Win + H</kbd> on Windows to dictate directly via microphone:</span>
+              </p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <textarea id="voiceManualInput" class="form-control" rows="2" style="flex: 1; min-width: 260px; font-size: 13px;" placeholder="e.g. 'There is a broken tubelight in C3 classroom ground floor' or 'पानी की पाइप लीक हो रही है'"></textarea>
+                <button type="button" class="btn btn-primary" style="height: auto; align-self: stretch; padding: 8px 18px; font-size: 13px;" onclick="submitVoiceDictation()">
+                  <i class="bi bi-magic me-1"></i>Auto-fill Form
+                </button>
+              </div>
             </div>
 
             <div class="panel">
@@ -388,141 +411,100 @@ function editAiDetails() {
 /* Multi-language voice input & speech recognition */
 let recognition = null;
 let isRecording = false;
+let activeMediaStream = null;
 
-function initSpeechRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert('Web Speech API is not supported in your browser. Please use Chrome, Edge, or Safari.');
-    return null;
+function toggleDictationPanel(show) {
+  const panel = document.getElementById('voiceDictationPanel');
+  const input = document.getElementById('voiceManualInput');
+  if (!panel) return;
+  const willShow = (show !== undefined) ? show : (panel.style.display === 'none');
+  panel.style.display = willShow ? 'block' : 'none';
+  if (willShow && input) {
+    input.focus();
   }
-  const rec = new SpeechRecognition();
-  rec.continuous = false;
-  rec.interimResults = false;
-
-  rec.onstart = function() {
-    isRecording = true;
-    const btn = document.getElementById('btnVoiceRecord');
-    const icon = document.getElementById('micIcon');
-    const text = document.getElementById('micText');
-    const status = document.getElementById('voiceStatus');
-
-    btn.classList.add('is-recording');
-    icon.className = 'bi bi-record-fill';
-    text.innerText = 'Listening…';
-    status.className = 'status-text is-recording';
-    status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Recording live audio…';
-  };
-
-  rec.onresult = async function(event) {
-    const transcript = event.results[0][0].transcript;
-    const langSelect = document.getElementById('voiceLangSelect').value;
-
-    const status = document.getElementById('voiceStatus');
-    status.className = 'status-text is-busy';
-    status.innerHTML = '<i class="bi bi-cpu me-1"></i> Translating to English &amp; extracting fields…';
-
-    try {
-      const response = await fetch('../api/translate_voice_report.php', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Auth-Token': FMC_AUTH_TOKEN
-        },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          raw_text: transcript, 
-          language: langSelect,
-          auth_token: FMC_AUTH_TOKEN
-        })
-      });
-      const resData = await response.json();
-
-      if (resData.success && resData.data) {
-        const data = resData.data;
-
-        document.getElementById('title').value = data.title || transcript;
-        document.getElementById('description').value = data.description || data.translated_text || transcript;
-        document.getElementById('location').value = data.location || '';
-
-        if (data.category_id) {
-          document.getElementById('category_id').value = data.category_id;
-        }
-        if (data.priority) {
-          document.getElementById('priority').value = data.priority.toLowerCase();
-        }
-
-        status.className = 'status-text is-success';
-        status.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Auto-filled form! Translated: "${escapeHtml(data.title)}"`;
-      } else {
-        status.className = 'status-text is-error';
-        status.innerText = `Translation failed: ${resData.error || 'Unknown error'}`;
-      }
-    } catch (err) {
-      console.error(err);
-      status.className = 'status-text is-error';
-      status.innerText = 'Error processing translation request.';
-    } finally {
-      resetVoiceBtn();
-    }
-  };
-
-  rec.onerror = function(event) {
-    console.error('Speech recognition error:', event.error);
-    const status = document.getElementById('voiceStatus');
-    status.className = 'status-text is-error';
-    if (event.error === 'network') {
-      status.innerHTML = '<i class="bi bi-wifi-off me-1"></i> Speech service network error. <button type="button" onclick="promptManualSpeechText()">Click to paste/type voice transcript</button>';
-    } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-      status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Mic access denied. Please allow microphone permissions in your browser.';
-    } else if (event.error === 'no-speech') {
-      status.className = 'status-text is-busy';
-      status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> No speech detected. Speak clearly into your mic and try again.';
-    } else {
-      status.innerText = `Mic error: ${event.error}`;
-    }
-    resetVoiceBtn();
-  };
-
-  rec.onend = function() {
-    if (isRecording) {
-      resetVoiceBtn();
-    }
-  };
-
-  return rec;
 }
 
-function promptManualSpeechText() {
-  const userText = prompt("Enter or paste your issue speech description (Hindi, Marathi, Konkani, English):");
-  if (!userText || !userText.trim()) return;
+function handleSpeechFallback(message) {
+  resetVoiceBtn();
+  const status = document.getElementById('voiceStatus');
+  if (status) {
+    status.className = 'status-text is-busy';
+    status.innerHTML = '<i class="bi bi-info-circle me-1"></i> Voice assistant panel open below — speak or enter your issue.';
+  }
+  const notice = document.getElementById('dictationHelpNotice');
+  if (notice && message) {
+    notice.innerHTML = `<span style="color:var(--burg);font-weight:600;">${escapeHtml(message)}</span><br>Speak using Windows Speech (<kbd style="background:var(--border, #e2e8f0);padding:2px 6px;border-radius:4px;font-size:11px;">Win + H</kbd>) or type details below:`;
+  }
+  toggleDictationPanel(true);
+}
 
-  const langSelect = document.getElementById('voiceLangSelect').value;
+function submitVoiceDictation() {
+  const input = document.getElementById('voiceManualInput');
+  const text = (input ? input.value : '').trim();
+  if (!text) {
+    alert('Please speak or type a short description of the campus issue.');
+    if (input) input.focus();
+    return;
+  }
+  const lang = document.getElementById('voiceLangSelect').value;
+  processSpeechTranscript(text, lang);
+  toggleDictationPanel(false);
+  if (input) input.value = '';
+}
+
+async function processSpeechTranscript(transcript, language) {
+  if (!transcript || !transcript.trim()) return;
+
   const status = document.getElementById('voiceStatus');
   status.className = 'status-text is-busy';
-  status.innerHTML = '<i class="bi bi-cpu me-1"></i> Translating to English &amp; extracting fields…';
+  status.innerHTML = '<i class="bi bi-cpu me-1"></i> Translating &amp; auto-filling fields…';
 
-  fetch('../api/translate_voice_report.php', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-Auth-Token': FMC_AUTH_TOKEN
-    },
-    credentials: 'include',
-    body: JSON.stringify({ 
-      raw_text: userText.trim(), 
-      language: langSelect,
-      auth_token: FMC_AUTH_TOKEN
-    })
-  })
-  .then(res => res.json())
-  .then(resData => {
+  try {
+    const response = await fetch('../api/translate_voice_report.php', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Auth-Token': FMC_AUTH_TOKEN
+      },
+      credentials: 'include',
+      body: JSON.stringify({ 
+        raw_text: transcript.trim(), 
+        language: language,
+        auth_token: FMC_AUTH_TOKEN
+      })
+    });
+    const resData = await response.json();
+
     if (resData.success && resData.data) {
       const data = resData.data;
-      document.getElementById('title').value = data.title || userText;
-      document.getElementById('description').value = data.description || data.translated_text || userText;
-      document.getElementById('location').value = data.location || '';
-      if (data.category_id) document.getElementById('category_id').value = data.category_id;
-      if (data.priority) document.getElementById('priority').value = data.priority.toLowerCase();
+
+      const titleEl = document.getElementById('title');
+      const descEl = document.getElementById('description');
+      const locEl = document.getElementById('location');
+      const catEl = document.getElementById('category_id');
+      const prioEl = document.getElementById('priority');
+
+      if (titleEl) {
+        titleEl.value = data.title || transcript;
+        titleEl.style.transition = 'box-shadow 0.3s ease';
+        titleEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
+        setTimeout(() => titleEl.style.boxShadow = '', 2000);
+      }
+      if (descEl) {
+        descEl.value = data.description || data.translated_text || transcript;
+        descEl.style.transition = 'box-shadow 0.3s ease';
+        descEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
+        setTimeout(() => descEl.style.boxShadow = '', 2000);
+      }
+      if (locEl && data.location) {
+        locEl.value = data.location;
+      }
+      if (catEl && data.category_id) {
+        catEl.value = data.category_id;
+      }
+      if (prioEl && data.priority) {
+        prioEl.value = data.priority.toLowerCase();
+      }
 
       status.className = 'status-text is-success';
       status.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Auto-filled form! Translated: "${escapeHtml(data.title)}"`;
@@ -530,16 +512,21 @@ function promptManualSpeechText() {
       status.className = 'status-text is-error';
       status.innerText = `Translation failed: ${resData.error || 'Unknown error'}`;
     }
-  })
-  .catch(err => {
-    console.error(err);
+  } catch (err) {
+    console.error('Translation error:', err);
     status.className = 'status-text is-error';
-    status.innerText = 'Error processing translation request.';
-  });
+    status.innerText = 'Error processing speech auto-fill request.';
+  }
 }
 
 function resetVoiceBtn() {
   isRecording = false;
+  if (activeMediaStream) {
+    try {
+      activeMediaStream.getTracks().forEach(t => t.stop());
+    } catch(e){}
+    activeMediaStream = null;
+  }
   const btn = document.getElementById('btnVoiceRecord');
   const icon = document.getElementById('micIcon');
   const text = document.getElementById('micText');
@@ -551,23 +538,150 @@ function resetVoiceBtn() {
   }
 }
 
-function toggleVoiceRecording() {
-  if (!recognition) {
-    recognition = initSpeechRecognition();
-  }
-  if (!recognition) return;
-
+async function toggleVoiceRecording() {
   if (isRecording) {
-    recognition.stop();
-  } else {
-    const selectedVal = document.getElementById('voiceLangSelect').value;
-    let speechLocale = 'en-IN';
-    if (selectedVal === 'hi-IN') speechLocale = 'hi-IN';
-    else if (selectedVal === 'mr-IN') speechLocale = 'mr-IN';
-    else if (selectedVal === 'kok-IN') speechLocale = 'hi-IN';
+    if (recognition) {
+      try { recognition.stop(); } catch(e){}
+    }
+    resetVoiceBtn();
+    return;
+  }
 
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    handleSpeechFallback('Web Speech API is not supported in this browser. Use dictation or type below:');
+    return;
+  }
+
+  // Pre-request microphone access
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      activeMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (permErr) {
+      console.warn('Microphone permission check:', permErr);
+      handleSpeechFallback('Microphone permission was denied. Please allow microphone access or enter details below:');
+      return;
+    }
+  }
+
+  if (recognition) {
+    try { recognition.abort(); } catch(e){}
+    recognition = null;
+  }
+
+  const selectedVal = document.getElementById('voiceLangSelect').value;
+  let speechLocale = selectedVal;
+  if (selectedVal === 'kok-IN') speechLocale = 'hi-IN';
+
+  let hasAttemptedFallback = false;
+  let capturedTranscript = '';
+
+  try {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
     recognition.lang = speechLocale;
+
+    recognition.onstart = function() {
+      isRecording = true;
+      const btn = document.getElementById('btnVoiceRecord');
+      const icon = document.getElementById('micIcon');
+      const text = document.getElementById('micText');
+      const status = document.getElementById('voiceStatus');
+
+      btn.classList.add('is-recording');
+      icon.className = 'bi bi-record-fill';
+      text.innerText = 'Listening…';
+      status.className = 'status-text is-recording';
+      status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening live… speak your issue clearly';
+    };
+
+    recognition.onresult = function(event) {
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcriptPart = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          capturedTranscript += ' ' + transcriptPart;
+        } else {
+          const status = document.getElementById('voiceStatus');
+          status.className = 'status-text is-recording';
+          status.innerHTML = `<i class="bi bi-soundwave me-1"></i> "${escapeHtml(transcriptPart)}"`;
+        }
+      }
+    };
+
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'network' && !hasAttemptedFallback && speechLocale !== 'en-US') {
+        hasAttemptedFallback = true;
+        console.log('Retrying speech with en-US fallback locale...');
+        const status = document.getElementById('voiceStatus');
+        status.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Retrying speech service…';
+        try { recognition.abort(); } catch(e){}
+        setTimeout(() => {
+          try {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            recognition.lang = 'en-US';
+            recognition.onstart = function() {
+              isRecording = true;
+              document.getElementById('btnVoiceRecord')?.classList.add('is-recording');
+              document.getElementById('micIcon').className = 'bi bi-record-fill';
+              document.getElementById('micText').innerText = 'Listening…';
+              document.getElementById('voiceStatus').className = 'status-text is-recording';
+              document.getElementById('voiceStatus').innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening (en-US)… speak now';
+            };
+            recognition.onresult = function(ev) {
+              for (let j = ev.resultIndex; j < ev.results.length; ++j) {
+                if (ev.results[j].isFinal) {
+                  capturedTranscript += ' ' + ev.results[j][0].transcript;
+                }
+              }
+            };
+            recognition.onerror = function() {
+              handleSpeechFallback('Speech network service unavailable. Dictate or enter your issue below:');
+            };
+            recognition.onend = function() {
+              resetVoiceBtn();
+              if (capturedTranscript && capturedTranscript.trim()) {
+                processSpeechTranscript(capturedTranscript.trim(), selectedVal);
+              }
+            };
+            recognition.start();
+          } catch(retryErr) {
+            handleSpeechFallback('Google speech cloud service is unavailable on your network.');
+          }
+        }, 250);
+        return;
+      }
+
+      if (event.error === 'network') {
+        handleSpeechFallback('Speech network service unavailable. Dictate or enter your issue below:');
+      } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        handleSpeechFallback('Microphone access denied. Please grant microphone permissions:');
+      } else if (event.error === 'no-speech') {
+        const status = document.getElementById('voiceStatus');
+        status.className = 'status-text is-busy';
+        status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> No speech detected. Click again and speak into your mic.';
+        resetVoiceBtn();
+      } else {
+        handleSpeechFallback(`Speech recognition error (${event.error}). Please dictate or enter below:`);
+      }
+    };
+
+    recognition.onend = function() {
+      resetVoiceBtn();
+      if (capturedTranscript && capturedTranscript.trim()) {
+        processSpeechTranscript(capturedTranscript.trim(), selectedVal);
+      }
+    };
+
     recognition.start();
+  } catch (err) {
+    console.error('Recognition start error:', err);
+    handleSpeechFallback('Could not start speech engine. Dictate or enter issue below:');
   }
 }
 
