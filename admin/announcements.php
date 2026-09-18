@@ -142,13 +142,13 @@ $pageSubtitle = 'Send campus-wide alerts and maintenance notices';
               <div class="field-group">
                 <label class="form-label" for="duration">Broadcast Duration / Expiry *</label>
                 <select id="duration" name="duration" class="form-control" onchange="toggleCustomExpiry(this.value)" required>
-                  <option value="never" selected>♾️ No expiration (Until manually deactivated)</option>
-                  <option value="12h">⏱️ 12 Hours</option>
-                  <option value="24h">⏱️ 24 Hours (1 Day)</option>
-                  <option value="2d">📅 2 Days</option>
-                  <option value="3d">📅 3 Days</option>
-                  <option value="7d">📅 7 Days (1 Week)</option>
-                  <option value="custom">🗓️ Custom end date &amp; time...</option>
+                  <option value="never" selected>No expiration (Until manually deactivated)</option>
+                  <option value="12h">12 Hours</option>
+                  <option value="24h">24 Hours (1 Day)</option>
+                  <option value="2d">2 Days</option>
+                  <option value="3d">3 Days</option>
+                  <option value="7d">7 Days (1 Week)</option>
+                  <option value="custom">Custom end date &amp; time...</option>
                 </select>
               </div>
 

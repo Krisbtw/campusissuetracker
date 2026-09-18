@@ -180,9 +180,9 @@ $pageSubtitle = 'Stay informed with live alerts, shutdowns, and campus updates';
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="font-size:13px;font-weight:600;color:var(--text-muted);margin-right:4px;">Urgency:</span>
             <a href="announcements.php<?= $searchQuery ? '?q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= empty($urgencyFilter) ? 'active' : '' ?>">All</a>
-            <a href="announcements.php?urgency=critical<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'critical' ? 'active' : '' ?>">🚨 Critical</a>
-            <a href="announcements.php?urgency=warning<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'warning' ? 'active' : '' ?>">⚠️ Warning</a>
-            <a href="announcements.php?urgency=info<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'info' ? 'active' : '' ?>">ℹ️ Info</a>
+            <a href="announcements.php?urgency=critical<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'critical' ? 'active' : '' ?>">Critical</a>
+            <a href="announcements.php?urgency=warning<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'warning' ? 'active' : '' ?>">Warning</a>
+            <a href="announcements.php?urgency=info<?= $searchQuery ? '&q=' . urlencode($searchQuery) : '' ?>" class="filter-chip <?= $urgencyFilter === 'info' ? 'active' : '' ?>">Info</a>
           </div>
 
           <div style="display:flex;align-items:center;gap:8px;">
