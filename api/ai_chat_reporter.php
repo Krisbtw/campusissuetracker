@@ -7,16 +7,14 @@ if (defined('E_DEPRECATED')) {
     error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 }
 
-require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth_check.php';
 
 try {
     // Read input and restore session from body token, cookie, or header
     $rawInput = file_get_contents('php://input');
     $input = json_decode($rawInput, true) ?: [];
-    if (!empty($input)) {
-        ensureSession($input);
-    }
+    ensureSession($input);
 
     // Ensure user is logged in
     if (!isLoggedIn()) {

@@ -4,6 +4,8 @@
  * Include this at the top of every protected page
  */
 
+require_once __DIR__ . '/../config/db.php';
+
 /**
  * Secret key derivation for HMAC token signing
  */
@@ -12,9 +14,13 @@ function getAuthSecret() {
     if ($secret !== null) return $secret;
     $secret = getenv('AUTH_SECRET') ?: ($_ENV['AUTH_SECRET'] ?? ($_SERVER['AUTH_SECRET'] ?? ''));
     if (empty($secret)) {
-        $dbPass = defined('DB_PASS') ? DB_PASS : (getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? 'fmc_pass'));
-        $dbUser = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'fmc_user'));
-        $secret = hash('sha256', $dbPass . ':' . $dbUser . ':FixMyCampus_Auth_Salt_2026');
+        $dbPass = defined('DB_PASS') ? DB_PASS : (getenv('DB_PASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? ($_SERVER['DB_PASSWORD'] ?? '')));
+        $dbUser = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? ($_SERVER['DB_USER'] ?? '')));
+        if (!empty($dbPass) || !empty($dbUser)) {
+            $secret = hash('sha256', $dbPass . ':' . $dbUser . ':FixMyCampus_Auth_Salt_2026');
+        } else {
+            $secret = hash('sha256', 'FixMyCampus_Universal_Fallback_Auth_Salt_2026');
+        }
     }
     return $secret;
 }
@@ -141,25 +147,31 @@ function ensureSession($customInput = null) {
         return true;
     }
 
-    // Attempt token recovery from cookie, headers, or payload
-    $token = null;
-    if (!empty($_COOKIE['fmc_auth'])) {
-        $token = $_COOKIE['fmc_auth'];
-    } elseif (!empty($_SERVER['HTTP_X_AUTH_TOKEN'])) {
-        $token = $_SERVER['HTTP_X_AUTH_TOKEN'];
-    } elseif (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+    // Attempt token recovery from explicit request payload/headers first, then cookie
+    $candidateTokens = [];
+    if (is_array($customInput) && !empty($customInput['auth_token'])) {
+        $candidateTokens[] = $customInput['auth_token'];
+    }
+    if (!empty($_SERVER['HTTP_X_AUTH_TOKEN'])) {
+        $candidateTokens[] = $_SERVER['HTTP_X_AUTH_TOKEN'];
+    }
+    if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
         if (preg_match('/Bearer\s+(\S+)/i', $_SERVER['HTTP_AUTHORIZATION'], $matches)) {
-            $token = $matches[1];
+            $candidateTokens[] = $matches[1];
         }
-    } elseif (is_array($customInput) && !empty($customInput['auth_token'])) {
-        $token = $customInput['auth_token'];
-    } elseif (!empty($_POST['auth_token'])) {
-        $token = $_POST['auth_token'];
-    } elseif (!empty($_GET['auth_token'])) {
-        $token = $_GET['auth_token'];
+    }
+    if (!empty($_POST['auth_token'])) {
+        $candidateTokens[] = $_POST['auth_token'];
+    }
+    if (!empty($_GET['auth_token'])) {
+        $candidateTokens[] = $_GET['auth_token'];
+    }
+    if (!empty($_COOKIE['fmc_auth'])) {
+        $candidateTokens[] = $_COOKIE['fmc_auth'];
     }
 
-    if (!empty($token)) {
+    foreach ($candidateTokens as $token) {
+        if (empty($token) || !is_string($token)) continue;
         $payload = verifyAuthToken($token);
         if ($payload) {
             $_SESSION['user_id']    = $payload['uid'];
@@ -167,7 +179,7 @@ function ensureSession($customInput = null) {
             $_SESSION['user_email'] = $payload['email'] ?? '';
             $_SESSION['role']       = $payload['role'];
             $_SESSION['department'] = $payload['dept'] ?? '';
-            if (empty($_COOKIE['fmc_auth']) && !headers_sent()) {
+            if (!headers_sent()) {
                 setAuthCookie([
                     'id'         => $payload['uid'],
                     'name'       => $payload['name'],

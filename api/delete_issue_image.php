@@ -1,14 +1,12 @@
 <?php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth_check.php';
 
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true) ?: [];
-if (!empty($input)) {
-    ensureSession($input);
-}
+ensureSession($input);
 
 if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);

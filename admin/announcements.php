@@ -133,9 +133,9 @@ $pageSubtitle = 'Send campus-wide alerts and maintenance notices';
               <div class="field-group">
                 <label class="form-label" for="urgency">Urgency Level *</label>
                 <select id="urgency" name="urgency" class="form-control" required>
-                  <option value="info" <?= (($_POST['urgency'] ?? '') === 'info') ? 'selected' : '' ?>>ℹ️ Info — General update or reminder</option>
-                  <option value="warning" <?= (($_POST['urgency'] ?? 'warning') === 'warning') ? 'selected' : '' ?>>⚠️ Warning — Service interruption / maintenance</option>
-                  <option value="critical" <?= (($_POST['urgency'] ?? '') === 'critical') ? 'selected' : '' ?>>🚨 Critical — Urgent safety notice / closure</option>
+                  <option value="info" <?= (($_POST['urgency'] ?? '') === 'info') ? 'selected' : '' ?>> Info — General update or reminder</option>
+                  <option value="warning" <?= (($_POST['urgency'] ?? 'warning') === 'warning') ? 'selected' : '' ?>> Warning — Service interruption / maintenance</option>
+                  <option value="critical" <?= (($_POST['urgency'] ?? '') === 'critical') ? 'selected' : '' ?>> Critical — Urgent safety notice / closure</option>
                 </select>
               </div>
 
