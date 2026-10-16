@@ -260,27 +260,131 @@ class CampusPDO extends PDO {
 }
 
 try {
-    if ($driver === 'pgsql') {
+    if ($driver === 'sqlite') {
+        $sqliteFile = __DIR__ . '/../database.sqlite';
+        $dsn = "sqlite:" . $sqliteFile;
+        $pdo = new CampusPDO($dsn, null, null, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        $pdo->exec("PRAGMA foreign_keys = ON;");
+    } elseif ($driver === 'pgsql') {
         $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
-    } else {
-        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
-    }
-
-    $pdo = new CampusPDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-    ]);
-
-    // Ensure database session timezone is set to Indian Standard Time (IST)
-    if ($driver === 'pgsql') {
+        $pdo = new CampusPDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
         $pdo->exec("SET TIME ZONE 'Asia/Kolkata'");
     } else {
+        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+        $pdo = new CampusPDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
         $pdo->exec("SET time_zone = '+05:30'");
     }
 
     // Check if initial schema setup is needed
-    if ($driver === 'pgsql') {
+    if ($driver === 'sqlite') {
+        $tableCheck = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+        if (!$tableCheck || empty($tableCheck->fetch())) {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    full_name TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'student',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    department TEXT DEFAULT NULL,
+                    phone TEXT DEFAULT NULL,
+                    avatar TEXT DEFAULT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS categories (
+                    category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category_name TEXT UNIQUE NOT NULL,
+                    icon TEXT DEFAULT 'bi-tools',
+                    description TEXT DEFAULT NULL
+                );
+                CREATE TABLE IF NOT EXISTS issues (
+                    issue_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    category_id INTEGER DEFAULT NULL,
+                    location TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'medium',
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    reported_by INTEGER NOT NULL,
+                    assigned_to INTEGER DEFAULT NULL,
+                    parent_id INTEGER DEFAULT NULL,
+                    is_parent INTEGER DEFAULT 0,
+                    affected_count INTEGER DEFAULT 1,
+                    reopen_count INTEGER DEFAULT 0,
+                    admin_remark TEXT DEFAULT NULL,
+                    rating INTEGER DEFAULT NULL,
+                    feedback TEXT DEFAULT NULL,
+                    feedback_at DATETIME DEFAULT NULL,
+                    resolution_image TEXT DEFAULT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS announcements (
+                    announcement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    urgency TEXT DEFAULT 'info',
+                    created_by INTEGER NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    expires_at DATETIME DEFAULT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS issue_images (
+                    image_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    issue_id INTEGER NOT NULL,
+                    image_path TEXT NOT NULL,
+                    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    issue_id INTEGER NOT NULL,
+                    changed_by INTEGER NOT NULL,
+                    old_status TEXT NOT NULL,
+                    new_status TEXT NOT NULL,
+                    remarks TEXT DEFAULT NULL,
+                    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS notifications (
+                    notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    issue_id INTEGER DEFAULT NULL,
+                    message TEXT NOT NULL,
+                    is_read INTEGER DEFAULT 0,
+                    notif_type TEXT DEFAULT 'info',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+
+                INSERT INTO categories (category_name, icon, description) VALUES
+                ('Electrical Fault', 'bi-lightning-charge', 'Issues related to electrical wiring, power outages, or lighting failures'),
+                ('Plumbing Issue', 'bi-droplet', 'Leaking pipes, blocked drains, or water supply problems'),
+                ('Cleanliness / Waste', 'bi-trash', 'Overflowing bins, dirty areas, or sanitation concerns'),
+                ('Infrastructure Damage', 'bi-building', 'Damaged walls, broken glass, structural concerns'),
+                ('IT / Network Issue', 'bi-wifi', 'Internet outages, broken computers, or network problems'),
+                ('Furniture Damage', 'bi-columns-gap', 'Broken chairs, desks, or classroom furniture'),
+                ('Safety & Security', 'bi-shield-exclamation', 'Safety hazards, CCTV faults, broken locks'),
+                ('Others', 'bi-three-dots', 'Any other campus issue not listed above');
+
+                INSERT INTO users (full_name, email, password, role, department, phone) VALUES
+                ('Admin User', 'admin@fixmycampus.com', '$2y$10\$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'admin', 'Administration', '9876543210'),
+                ('John Student', 'student@fixmycampus.com', '$2y$10\$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'student', 'Computer Science', '9876543211'),
+                ('Jane Staff', 'staff@fixmycampus.com', '$2y$10\$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'staff', 'Library', '9876543212'),
+                ('Mike Maintenance', 'maintenance@fixmycampus.com', '$2y$10\$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'maintenance', 'Maintenance Dept', '9876543213'),
+                ('Sarah Techie', 'tech@fixmycampus.com', '$2y$10\$Z35bH6yk4CnQDdqqNoVNwe28rZv5xa206HpLeWUc0qaLYqsGdVxn.', 'maintenance', 'IT Department', '9876543214');
+            ");
+        }
+    } elseif ($driver === 'pgsql') {
         $tableCheck = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
         $hasUsers = ($tableCheck && (int)$tableCheck->fetchColumn() > 0);
         if (!$hasUsers) {

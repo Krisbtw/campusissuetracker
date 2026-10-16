@@ -81,9 +81,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     
     if ($mergedParentId) {
-      $success="Issue #{$issue_id} submitted successfully and auto-merged into Parent Incident #{$mergedParentId}!";
+      $redirUrl = "my_issues.php?created={$issue_id}&merged={$mergedParentId}";
     } else {
-      $success="Issue #{$issue_id} submitted successfully!";
+      $redirUrl = "my_issues.php?created={$issue_id}";
+    }
+    if (!headers_sent()) {
+      header("Location: " . $redirUrl);
+      exit();
+    } else {
+      echo "<script>window.location.href=" . json_encode($redirUrl) . ";</script>";
+      exit();
     }
   }
 }
@@ -95,6 +102,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
 <title>Report Issue – FixMyCampus</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
 <div class="app-wrapper">
@@ -154,7 +162,7 @@ $pageTitle='Report an Issue';$pageSubtitle='Submit a campus problem for resoluti
         </div>
       </div>
 
-      <form method="POST" enctype="multipart/form-data">
+      <form id="reportIssueForm" method="POST" enctype="multipart/form-data">
         <div class="content-grid report-grid">
           <div>
             <div class="voice-toolbar" id="voiceToolbar">
@@ -375,43 +383,107 @@ async function sendAiMessage() {
   }
 }
 
+function setCategorySelect(catSelect, categoryId, categoryName) {
+  if (!catSelect) return false;
+  let matched = false;
+  if (categoryId) {
+    for (let i = 0; i < catSelect.options.length; i++) {
+      if (catSelect.options[i].value == categoryId) {
+        catSelect.selectedIndex = i;
+        matched = true;
+        break;
+      }
+    }
+  }
+  if (!matched && categoryName) {
+    const target = String(categoryName).toLowerCase().trim();
+    for (let i = 0; i < catSelect.options.length; i++) {
+      const optText = catSelect.options[i].text.toLowerCase();
+      if (optText.includes(target) || target.includes(optText)) {
+        catSelect.selectedIndex = i;
+        matched = true;
+        break;
+      }
+    }
+  }
+  if (!matched && catSelect.selectedIndex <= 0 && catSelect.options.length > 1) {
+    catSelect.selectedIndex = 1;
+    matched = true;
+  }
+  return matched;
+}
+
+function flashSuccessField(el) {
+  if (!el) return;
+  el.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+  el.style.borderColor = 'var(--emerald, #10b981)';
+  el.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
+  setTimeout(() => {
+    el.style.borderColor = '';
+    el.style.boxShadow = '';
+  }, 2500);
+}
+
 function confirmAndCreateTicket() {
   if (!currentAiData) return;
 
-  document.getElementById('title').value = currentAiData.title || '';
-  document.getElementById('description').value = currentAiData.description || '';
-  document.getElementById('location').value = currentAiData.location || '';
+  const form = document.getElementById('reportIssueForm') || document.querySelector('form[method="POST"]');
+  if (!form) return;
 
-  if (currentAiData.category_id) {
-    document.getElementById('category_id').value = currentAiData.category_id;
+  const titleEl = document.getElementById('title');
+  const descEl = document.getElementById('description');
+  const locEl = document.getElementById('location');
+  const catEl = document.getElementById('category_id');
+  const prioEl = document.getElementById('priority');
+
+  if (titleEl) titleEl.value = currentAiData.title || '';
+  if (descEl) descEl.value = currentAiData.description || '';
+  if (locEl) locEl.value = currentAiData.location || '';
+
+  if (catEl) {
+    setCategorySelect(catEl, currentAiData.category_id, currentAiData.category_name);
   }
-  if (currentAiData.priority) {
-    document.getElementById('priority').value = currentAiData.priority.toLowerCase();
+  if (prioEl && currentAiData.priority) {
+    const pVal = currentAiData.priority.toLowerCase();
+    for (let i = 0; i < prioEl.options.length; i++) {
+      if (prioEl.options[i].value === pVal) {
+        prioEl.selectedIndex = i;
+        break;
+      }
+    }
   }
 
-  document.querySelector('form').submit();
+  form.submit();
 }
 
 function editAiDetails() {
   if (!currentAiData) return;
 
-  document.getElementById('title').value = currentAiData.title || '';
-  document.getElementById('description').value = currentAiData.description || '';
-  document.getElementById('location').value = currentAiData.location || '';
-  if (currentAiData.category_id) {
-    document.getElementById('category_id').value = currentAiData.category_id;
+  const titleEl = document.getElementById('title');
+  const descEl = document.getElementById('description');
+  const locEl = document.getElementById('location');
+  const catEl = document.getElementById('category_id');
+  const prioEl = document.getElementById('priority');
+
+  if (titleEl) titleEl.value = currentAiData.title || '';
+  if (descEl) descEl.value = currentAiData.description || '';
+  if (locEl) locEl.value = currentAiData.location || '';
+
+  if (catEl) {
+    setCategorySelect(catEl, currentAiData.category_id, currentAiData.category_name);
   }
-  if (currentAiData.priority) {
-    document.getElementById('priority').value = currentAiData.priority.toLowerCase();
+  if (prioEl && currentAiData.priority) {
+    const pVal = currentAiData.priority.toLowerCase();
+    for (let i = 0; i < prioEl.options.length; i++) {
+      if (prioEl.options[i].value === pVal) {
+        prioEl.selectedIndex = i;
+        break;
+      }
+    }
   }
 
   switchReportMode('standard');
 }
-
-/* Multi-language voice input & speech recognition */
-let recognition = null;
-let isRecording = false;
-let activeMediaStream = null;
 
 function toggleDictationPanel(show) {
   const panel = document.getElementById('voiceDictationPanel');
@@ -438,12 +510,68 @@ function submitVoiceDictation() {
   if (input) input.value = '';
 }
 
+function applyAutoFillResult(resData, status) {
+  if (resData.success && resData.data) {
+    const data = resData.data;
+
+    const titleEl = document.getElementById('title');
+    const descEl = document.getElementById('description');
+    const locEl = document.getElementById('location');
+    const catEl = document.getElementById('category_id');
+    const prioEl = document.getElementById('priority');
+
+    if (titleEl && data.title) {
+      titleEl.value = data.title;
+      flashSuccessField(titleEl);
+    }
+    if (descEl) {
+      descEl.value = data.description || data.translated_text || '';
+      flashSuccessField(descEl);
+    }
+    if (locEl && data.location) {
+      locEl.value = data.location;
+      flashSuccessField(locEl);
+    }
+    if (catEl) {
+      setCategorySelect(catEl, data.category_id, data.category_name);
+      flashSuccessField(catEl);
+    }
+    if (prioEl && data.priority) {
+      const pVal = data.priority.toLowerCase();
+      for (let i = 0; i < prioEl.options.length; i++) {
+        if (prioEl.options[i].value === pVal) {
+          prioEl.selectedIndex = i;
+          break;
+        }
+      }
+      flashSuccessField(prioEl);
+    }
+
+    if (status) {
+      status.className = 'status-text is-success';
+      status.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Auto-filled form! "${escapeHtml(data.title)}"`;
+    }
+
+    if (typeof checkSimilarIssuesDebounced === 'function') {
+      checkSimilarIssuesDebounced();
+    }
+  } else {
+    if (status) {
+      status.className = 'status-text is-error';
+      status.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i> Auto-fill notice: ${escapeHtml(resData.error || 'Could not understand speech')}`;
+    }
+    toggleDictationPanel(true);
+  }
+}
+
 async function processSpeechTranscript(transcript, language) {
   if (!transcript || !transcript.trim()) return;
 
   const status = document.getElementById('voiceStatus');
-  status.className = 'status-text is-busy';
-  status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Translating &amp; auto-filling fields…';
+  if (status) {
+    status.className = 'status-text is-busy';
+    status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Translating &amp; auto-filling fields…';
+  }
 
   try {
     const response = await fetch('../api/translate_voice_report.php', {
@@ -460,53 +588,91 @@ async function processSpeechTranscript(transcript, language) {
       })
     });
     const resData = await response.json();
-
-    if (resData.success && resData.data) {
-      const data = resData.data;
-
-      const titleEl = document.getElementById('title');
-      const descEl = document.getElementById('description');
-      const locEl = document.getElementById('location');
-      const catEl = document.getElementById('category_id');
-      const prioEl = document.getElementById('priority');
-
-      if (titleEl) {
-        titleEl.value = data.title || transcript;
-        titleEl.style.transition = 'box-shadow 0.3s ease';
-        titleEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
-        setTimeout(() => titleEl.style.boxShadow = '', 2000);
-      }
-      if (descEl) {
-        descEl.value = data.description || data.translated_text || transcript;
-        descEl.style.transition = 'box-shadow 0.3s ease';
-        descEl.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.35)';
-        setTimeout(() => descEl.style.boxShadow = '', 2000);
-      }
-      if (locEl && data.location) {
-        locEl.value = data.location;
-      }
-      if (catEl && data.category_id) {
-        catEl.value = data.category_id;
-      }
-      if (prioEl && data.priority) {
-        prioEl.value = data.priority.toLowerCase();
-      }
-
-      status.className = 'status-text is-success';
-      status.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Auto-filled form! Translated: "${escapeHtml(data.title)}"`;
-    } else {
-      status.className = 'status-text is-error';
-      status.innerText = `Auto-fill failed: ${resData.error || 'Unknown error'}`;
-    }
+    applyAutoFillResult(resData, status);
   } catch (err) {
     console.error('Translation error:', err);
-    status.className = 'status-text is-error';
-    status.innerText = 'Error processing speech auto-fill request.';
+    if (status) {
+      status.className = 'status-text is-error';
+      status.innerText = 'Error processing speech auto-fill request.';
+    }
   }
 }
 
+async function sendAudioBlobForAutoFill(blob, language) {
+  const status = document.getElementById('voiceStatus');
+  if (status) {
+    status.className = 'status-text is-busy';
+    status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Transcribing voice &amp; auto-filling fields…';
+  }
+
+  try {
+    const reader = new FileReader();
+    reader.onloadend = async function() {
+      const dataUrl = reader.result;
+      const base64Data = (typeof dataUrl === 'string' && dataUrl.includes(',')) ? dataUrl.split(',')[1] : '';
+      const mimeType = blob.type || 'audio/webm';
+
+      if (!base64Data) {
+        if (status) {
+          status.className = 'status-text is-error';
+          status.innerText = 'Could not process audio recording.';
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch('../api/translate_voice_report.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': FMC_AUTH_TOKEN
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            audio_base64: base64Data,
+            mime_type: mimeType,
+            language: language,
+            auth_token: FMC_AUTH_TOKEN
+          })
+        });
+
+        const resData = await response.json();
+        applyAutoFillResult(resData, status);
+      } catch (fetchErr) {
+        console.error('Audio upload error:', fetchErr);
+        if (status) {
+          status.className = 'status-text is-error';
+          status.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Failed to process voice. Assistant opened below:';
+        }
+        toggleDictationPanel(true);
+      }
+    };
+    reader.readAsDataURL(blob);
+  } catch (readErr) {
+    console.error('FileReader error:', readErr);
+    if (status) {
+      status.className = 'status-text is-error';
+      status.innerText = 'Error reading audio data.';
+    }
+  }
+}
+
+/* Multi-language voice input, audio recording & silence detection */
+let voiceStream = null;
+let voiceAudioCtx = null;
+let voiceAnalyser = null;
+let voiceMediaRecorder = null;
+let voiceAudioChunks = [];
+let voiceSpeechRecognition = null;
+let isVoiceRecording = false;
+let hasSpokenDetected = false;
+let lastSpokenTimestamp = 0;
+let voiceStartTimestamp = 0;
+let voiceVadRafId = null;
+let voiceTranscriptAcc = '';
+
 function resetVoiceBtn() {
-  isRecording = false;
+  isVoiceRecording = false;
   const btn = document.getElementById('btnVoiceRecord');
   const icon = document.getElementById('micIcon');
   const text = document.getElementById('micText');
@@ -518,141 +684,317 @@ function resetVoiceBtn() {
   }
 }
 
+function stopVoiceRecordingWithoutProcessing(statusMsg) {
+  isVoiceRecording = false;
+  if (voiceVadRafId) {
+    cancelAnimationFrame(voiceVadRafId);
+    voiceVadRafId = null;
+  }
+  if (voiceSpeechRecognition) {
+    try { voiceSpeechRecognition.abort(); } catch(e){}
+    voiceSpeechRecognition = null;
+  }
+  if (voiceAudioCtx) {
+    try { voiceAudioCtx.close(); } catch(e){}
+    voiceAudioCtx = null;
+  }
+  if (voiceStream) {
+    voiceStream.getTracks().forEach(t => t.stop());
+    voiceStream = null;
+  }
+  if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+    try { voiceMediaRecorder.stop(); } catch(e){}
+    voiceMediaRecorder = null;
+  }
+  resetVoiceBtn();
+  const status = document.getElementById('voiceStatus');
+  if (status && statusMsg) {
+    status.className = 'status-text is-busy';
+    status.innerHTML = `<i class="bi bi-volume-mute me-1"></i> ${escapeHtml(statusMsg)}`;
+  }
+}
+
+async function stopVoiceRecordingAndProcess() {
+  if (!isVoiceRecording) return;
+  isVoiceRecording = false;
+
+  if (voiceVadRafId) {
+    cancelAnimationFrame(voiceVadRafId);
+    voiceVadRafId = null;
+  }
+
+  if (voiceSpeechRecognition) {
+    try { voiceSpeechRecognition.stop(); } catch(e){}
+  }
+
+  if (voiceAudioCtx) {
+    try { voiceAudioCtx.close(); } catch(e){}
+    voiceAudioCtx = null;
+  }
+
+  resetVoiceBtn();
+
+  const status = document.getElementById('voiceStatus');
+  if (status) {
+    status.className = 'status-text is-busy';
+    status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Processing speech and auto-filling form…';
+  }
+
+  const selectedLang = document.getElementById('voiceLangSelect').value;
+
+  if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+    voiceMediaRecorder.onstop = async function() {
+      if (voiceStream) {
+        voiceStream.getTracks().forEach(t => t.stop());
+        voiceStream = null;
+      }
+
+      const mimeType = voiceMediaRecorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(voiceAudioChunks, { type: mimeType });
+
+      const finalTranscript = voiceTranscriptAcc.trim();
+      if (finalTranscript.length > 3) {
+        // We got a good transcript from Web Speech API
+        await processSpeechTranscript(finalTranscript, selectedLang);
+      } else if (audioBlob.size > 800) {
+        // Attempt keyless client-side Whisper transcription if available (e.g. in Brave)
+        let puterTranscript = '';
+        if (typeof puter !== 'undefined' && puter.ai && typeof puter.ai.speech2txt === 'function') {
+          try {
+            if (status) {
+              status.className = 'status-text is-busy';
+              status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Transcribing voice audio…';
+            }
+            const audioFile = new File([audioBlob], 'voice_clip.webm', { type: mimeType });
+            const pRes = await puter.ai.speech2txt(audioFile);
+            puterTranscript = (typeof pRes === 'string') ? pRes : (pRes?.text || '');
+          } catch (pErr) {
+            console.warn('Puter speech2txt notice:', pErr);
+          }
+        }
+        if (puterTranscript && puterTranscript.trim().length > 3) {
+          await processSpeechTranscript(puterTranscript.trim(), selectedLang);
+        } else {
+          // Send recorded audio to server for Gemini transcription & autofill
+          await sendAudioBlobForAutoFill(audioBlob, selectedLang);
+        }
+      } else {
+        if (status) {
+          status.className = 'status-text is-busy';
+          status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> Speech was too short. Click Speak &amp; auto-fill to try again.';
+        }
+      }
+    };
+    try { voiceMediaRecorder.stop(); } catch(e){}
+  } else {
+    if (voiceStream) {
+      voiceStream.getTracks().forEach(t => t.stop());
+      voiceStream = null;
+    }
+    const finalTranscript = voiceTranscriptAcc.trim();
+    if (finalTranscript.length > 3) {
+      await processSpeechTranscript(finalTranscript, selectedLang);
+    }
+  }
+}
+
 async function toggleVoiceRecording() {
   const status = document.getElementById('voiceStatus');
+  const btn = document.getElementById('btnVoiceRecord');
+  const icon = document.getElementById('micIcon');
+  const text = document.getElementById('micText');
 
-  if (isRecording) {
-    if (recognition) {
-      try { recognition.stop(); } catch(e){}
-    }
-    resetVoiceBtn();
+  // If already recording, pressing the button manually stops and processes!
+  if (isVoiceRecording) {
+    stopVoiceRecordingAndProcess();
     return;
   }
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     if (status) {
       status.className = 'status-text is-error';
-      status.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Web Speech is not supported in this browser. Dictate panel opened below:';
+      status.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Microphone not supported in this browser. Assistant opened below:';
     }
     toggleDictationPanel(true);
     return;
   }
 
-  if (recognition) {
-    try { recognition.abort(); } catch(e){}
-    recognition = null;
+  try {
+    voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (permErr) {
+    console.warn('Microphone permission denied:', permErr);
+    resetVoiceBtn();
+    if (status) {
+      status.className = 'status-text is-error';
+      status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Microphone permission blocked. Allow mic access or use Type / Dictate below:';
+    }
+    toggleDictationPanel(true);
+    return;
   }
 
-  const selectedVal = document.getElementById('voiceLangSelect').value;
-  let speechLocale = selectedVal;
-  if (selectedVal === 'kok-IN') speechLocale = 'hi-IN';
+  isVoiceRecording = true;
+  hasSpokenDetected = false;
+  lastSpokenTimestamp = 0;
+  voiceStartTimestamp = Date.now();
+  voiceAudioChunks = [];
+  voiceTranscriptAcc = '';
 
-  let hasAttemptedFallback = false;
-  let capturedTranscript = '';
+  if (btn) {
+    btn.classList.add('is-recording');
+    icon.className = 'bi bi-record-fill';
+    text.innerText = 'Listening… (Click to finish)';
+  }
+  if (status) {
+    status.className = 'status-text is-recording';
+    status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening live… speak your campus issue now.';
+  }
 
-  function startRecognition(localeToUse) {
-    try {
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      recognition.lang = localeToUse;
+  // 1. Setup AudioContext Analyser for Voice Activity & Silence Detection (VAD)
+  try {
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtxClass) {
+      voiceAudioCtx = new AudioCtxClass();
+      const source = voiceAudioCtx.createMediaStreamSource(voiceStream);
+      voiceAnalyser = voiceAudioCtx.createAnalyser();
+      voiceAnalyser.fftSize = 256;
+      voiceAnalyser.smoothingTimeConstant = 0.3;
+      source.connect(voiceAnalyser);
+    }
+  } catch (ctxErr) {
+    console.warn('AudioContext creation failed:', ctxErr);
+    voiceAudioCtx = null;
+    voiceAnalyser = null;
+  }
 
-      recognition.onstart = function() {
-        isRecording = true;
-        const btn = document.getElementById('btnVoiceRecord');
-        const icon = document.getElementById('micIcon');
-        const text = document.getElementById('micText');
-
-        if (btn) {
-          btn.classList.add('is-recording');
-          icon.className = 'bi bi-record-fill';
-          text.innerText = 'Listening… (Click to finish)';
-        }
-        if (status) {
-          status.className = 'status-text is-recording';
-          status.innerHTML = '<i class="bi bi-soundwave me-1"></i> Listening live… speak your issue details now.';
-        }
-      };
-
-      recognition.onresult = function(event) {
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcriptPart = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            capturedTranscript += ' ' + transcriptPart;
-          } else {
-            if (status) {
-              status.className = 'status-text is-recording';
-              status.innerHTML = `<i class="bi bi-soundwave me-1"></i> "${escapeHtml(transcriptPart)}"`;
-            }
-          }
-        }
-      };
-
-      recognition.onerror = function(event) {
-        console.warn('Speech recognition event error:', event.error);
-
-        // If network error occurred on localized language, auto-retry once with en-US
-        if (event.error === 'network' && !hasAttemptedFallback && localeToUse !== 'en-US') {
-          hasAttemptedFallback = true;
-          if (status) {
-            status.className = 'status-text is-busy';
-            status.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> Retrying speech service with standard English…';
-          }
-          try { recognition.abort(); } catch(e){}
-          setTimeout(() => {
-            startRecognition('en-US');
-          }, 300);
-          return;
-        }
-
-        resetVoiceBtn();
-
-        if (status) {
-          if (event.error === 'no-speech') {
-            status.className = 'status-text is-busy';
-            status.innerHTML = '<i class="bi bi-volume-mute me-1"></i> No speech detected. Click "Speak & auto-fill" and speak clearly into your mic.';
-          } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            status.className = 'status-text is-error';
-            status.innerHTML = '<i class="bi bi-mic-mute me-1"></i> Microphone permission blocked. Click the lock icon in the browser address bar to allow mic access.';
-          } else if (event.error === 'network') {
-            status.className = 'status-text is-busy';
-            status.innerHTML = '<i class="bi bi-mic-fill me-1" style="color:var(--primary);"></i> Speech cloud blocked on this network. Assistant opened below — speak with <kbd>Win + H</kbd> or type.';
-            // Automatically open assistive dictation panel with guidance
-            const notice = document.getElementById('dictationHelpNotice');
-            if (notice) {
-              notice.innerHTML = `<span style="color:var(--burg,#7b1e2b);font-weight:600;"><i class="bi bi-wifi-off me-1"></i> Google speech cloud is blocked by your network/firewall.</span><br>Use Windows Voice Typing (<kbd style="background:var(--border, #e2e8f0);padding:2px 6px;border-radius:4px;font-size:11px;">Win + H</kbd>) to dictate in any language, or type details below and click <strong>Auto-fill Form</strong>:`;
-            }
-            toggleDictationPanel(true);
-          } else {
-            status.className = 'status-text is-error';
-            status.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Speech error (${escapeHtml(event.error)}). Assistant opened below:`;
-            toggleDictationPanel(true);
-          }
-        }
-      };
-
-      recognition.onend = function() {
-        resetVoiceBtn();
-        if (capturedTranscript && capturedTranscript.trim()) {
-          processSpeechTranscript(capturedTranscript.trim(), selectedVal);
-        }
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.error('Recognition start error:', err);
-      resetVoiceBtn();
-      if (status) {
-        status.className = 'status-text is-error';
-        status.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Could not start speech engine. Assistant opened below:';
+  // 2. Setup MediaRecorder for audio recording
+  let preferredMime = '';
+  const testMimes = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+    'audio/ogg'
+  ];
+  if (window.MediaRecorder) {
+    for (const m of testMimes) {
+      if (MediaRecorder.isTypeSupported(m)) {
+        preferredMime = m;
+        break;
       }
-      toggleDictationPanel(true);
     }
   }
 
-  startRecognition(speechLocale);
+  try {
+    voiceMediaRecorder = preferredMime 
+      ? new MediaRecorder(voiceStream, { mimeType: preferredMime }) 
+      : new MediaRecorder(voiceStream);
+  } catch (mrErr) {
+    console.warn('MediaRecorder init fallback:', mrErr);
+    voiceMediaRecorder = new MediaRecorder(voiceStream);
+  }
+
+  voiceMediaRecorder.ondataavailable = function(e) {
+    if (e.data && e.data.size > 0) {
+      voiceAudioChunks.push(e.data);
+    }
+  };
+  voiceMediaRecorder.start(250);
+
+  // 3. Concurrently try Web Speech API (for instant transcription on supported browsers)
+  const selectedLang = document.getElementById('voiceLangSelect').value;
+  let speechLocale = selectedLang;
+  if (selectedLang === 'kok-IN') speechLocale = 'hi-IN';
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRec) {
+    try {
+      voiceSpeechRecognition = new SpeechRec();
+      voiceSpeechRecognition.continuous = false;
+      voiceSpeechRecognition.interimResults = true;
+      voiceSpeechRecognition.maxAlternatives = 1;
+      voiceSpeechRecognition.lang = speechLocale;
+
+      voiceSpeechRecognition.onresult = function(event) {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const part = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            voiceTranscriptAcc += ' ' + part;
+          } else {
+            interim += ' ' + part;
+          }
+        }
+        const fullDisplay = (voiceTranscriptAcc + ' ' + interim).trim();
+        if (fullDisplay && status) {
+          status.innerHTML = `<i class="bi bi-soundwave me-1"></i> "${escapeHtml(fullDisplay)}"`;
+        }
+        hasSpokenDetected = true;
+        lastSpokenTimestamp = Date.now();
+      };
+
+      voiceSpeechRecognition.onerror = function(ev) {
+        console.warn('SpeechRecognition notice (audio recorder active):', ev.error);
+        // Do NOT abort! MediaRecorder is recording audio to send to server.
+      };
+
+      voiceSpeechRecognition.start();
+    } catch (sErr) {
+      console.warn('SpeechRecognition start notice:', sErr);
+    }
+  }
+
+  // 4. Voice Activity Detection (VAD) & Silence Auto-Stop Loop
+  const bufferLen = voiceAnalyser ? voiceAnalyser.frequencyBinCount : 0;
+  const freqData = bufferLen ? new Uint8Array(bufferLen) : null;
+
+  function vadLoop() {
+    if (!isVoiceRecording) return;
+
+    if (voiceAnalyser && freqData) {
+      voiceAnalyser.getByteFrequencyData(freqData);
+      let sum = 0;
+      for (let i = 0; i < bufferLen; i++) {
+        sum += freqData[i];
+      }
+      const avgVol = sum / bufferLen;
+      // Volume threshold: speaking is typically > 16 in frequency domain
+      if (avgVol > 16) {
+        if (!hasSpokenDetected) {
+          hasSpokenDetected = true;
+        }
+        lastSpokenTimestamp = Date.now();
+      }
+    }
+
+    const now = Date.now();
+    const elapsedTotal = now - voiceStartTimestamp;
+
+    // Condition A: User has spoken, and then stops talking (silence >= 2.0s) -> AUTO-STOP & AUTO-FILL!
+    if (hasSpokenDetected && lastSpokenTimestamp > 0) {
+      const silenceDuration = now - lastSpokenTimestamp;
+      if (silenceDuration >= 2000 && (lastSpokenTimestamp - voiceStartTimestamp) >= 700) {
+        console.log('Voice finished, silence detected (' + silenceDuration + 'ms). Auto-stopping and auto-filling!');
+        stopVoiceRecordingAndProcess();
+        return;
+      }
+    }
+
+    // Condition B: No speech heard after 8 seconds -> Auto-stop with friendly prompt
+    if (!hasSpokenDetected && elapsedTotal >= 8000) {
+      stopVoiceRecordingWithoutProcessing('No speech detected. Click Speak & auto-fill and speak into your mic.');
+      return;
+    }
+
+    // Condition C: Safety max duration limit of 25 seconds
+    if (elapsedTotal >= 25000) {
+      stopVoiceRecordingAndProcess();
+      return;
+    }
+
+    voiceVadRafId = requestAnimationFrame(vadLoop);
+  }
+
+  voiceVadRafId = requestAnimationFrame(vadLoop);
 }
 
 let selectedUploadFiles = [];

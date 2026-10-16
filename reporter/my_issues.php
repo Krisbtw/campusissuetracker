@@ -34,6 +34,16 @@ $pageTitle='My Issues';$pageSubtitle='Track all your submitted issues';
       <div class="page-head">
         <h1 class="page-title"><?=htmlspecialchars($pageTitle)?></h1>
       </div>
+      <?php if(!empty($_GET['created'])):?>
+        <div class="alert-banner alert-success" role="status">
+          <i class="bi bi-check-circle-fill me-1"></i> Issue #<?=intval($_GET['created'])?> submitted successfully!<?php if(!empty($_GET['merged'])):?> (Merged into Incident #<?=intval($_GET['merged'])?>)<?php endif;?>
+        </div>
+      <?php endif;?>
+      <?php if(!empty($_GET['error'])):?>
+        <div class="alert-banner alert-danger" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> <?=htmlspecialchars($_GET['error'])?>
+        </div>
+      <?php endif;?>
       <form method="GET" class="filter-bar">
         <input type="text" name="search" placeholder="Search title or location..." value="<?=htmlspecialchars($search)?>" class="filter-control" aria-label="Search">
         <select name="status" class="filter-control" aria-label="Filter by status">

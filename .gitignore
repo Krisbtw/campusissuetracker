@@ -7,4 +7,4 @@ uploads/issues/*
 .env*
 !.env.example
 .agents/
-
+*.sqlite

@@ -1,47 +1,108 @@
 <?php
 ob_start();
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+
+// Suppress deprecations to ensure JSON purity
+if (defined('E_DEPRECATED')) {
+    error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+}
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth_check.php';
 
-$rawInput = file_get_contents('php://input');
-$input = json_decode($rawInput, true) ?: [];
-ensureSession($input);
+try {
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?: [];
+    ensureSession($input);
 
-// Ensure user is logged in
-if (!isLoggedIn()) {
-    ob_clean();
-    echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);
-    exit();
-}
+    // Ensure user is logged in
+    if (!isLoggedIn()) {
+        ob_clean();
+        echo json_encode(['success' => false, 'error' => 'Unauthorized access. Please log in.']);
+        exit();
+    }
 
-$rawText = trim($input['raw_text'] ?? $_POST['raw_text'] ?? '');
-$sourceLang = trim($input['language'] ?? $_POST['language'] ?? 'en-IN');
+    $rawText = trim($input['raw_text'] ?? $_POST['raw_text'] ?? '');
+    $audioBase64 = trim($input['audio_base64'] ?? $_POST['audio_base64'] ?? '');
+    $mimeType = trim($input['mime_type'] ?? $_POST['mime_type'] ?? 'audio/webm');
+    $sourceLang = trim($input['language'] ?? $_POST['language'] ?? 'en-IN');
 
-if (empty($rawText)) {
-    ob_clean();
-    echo json_encode(['success' => false, 'error' => 'No speech input provided.']);
-    exit();
-}
+    if (empty($rawText) && empty($audioBase64)) {
+        ob_clean();
+        echo json_encode(['success' => false, 'error' => 'No speech or audio input provided.']);
+        exit();
+    }
 
-// Fetch categories from DB
-$categories = $pdo->query("SELECT category_id, category_name FROM categories")->fetchAll();
+    // Fetch categories from DB
+    $categories = [];
+    try {
+        $categories = $pdo->query("SELECT category_id, category_name FROM categories ORDER BY category_id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $categories = [];
+    }
+    if (empty($categories)) {
+        $categories = [
+            ['category_id' => 1, 'category_name' => 'General / Infrastructure']
+        ];
+    }
 
-$apiKey = getenv('GEMINI_API_KEY');
-if (empty($apiKey) && isset($_ENV['GEMINI_API_KEY']) && is_string($_ENV['GEMINI_API_KEY'])) {
-    $apiKey = $_ENV['GEMINI_API_KEY'];
-}
-if (empty($apiKey) && isset($_SERVER['GEMINI_API_KEY']) && is_string($_SERVER['GEMINI_API_KEY'])) {
-    $apiKey = $_SERVER['GEMINI_API_KEY'];
-}
-$apiKey = is_string($apiKey) ? trim($apiKey) : '';
-$extracted = null;
+    $apiKey = getenv('GEMINI_API_KEY');
+    if (empty($apiKey) && isset($_ENV['GEMINI_API_KEY']) && is_string($_ENV['GEMINI_API_KEY'])) {
+        $apiKey = $_ENV['GEMINI_API_KEY'];
+    }
+    if (empty($apiKey) && isset($_SERVER['GEMINI_API_KEY']) && is_string($_SERVER['GEMINI_API_KEY'])) {
+        $apiKey = $_SERVER['GEMINI_API_KEY'];
+    }
+    $apiKey = is_string($apiKey) ? trim($apiKey) : '';
+    $extracted = null;
 
-if (!empty($apiKey)) {
-    $catList = implode(", ", array_map(function($c) { return $c['category_name'] . " (ID: " . $c['category_id'] . ")"; }, $categories));
-    
-    $prompt = "You are a multi-lingual AI assistant for FixMyCampus. A student spoke the following message in language ({$sourceLang}): \"{$rawText}\".
+    $catList = implode(", ", array_map(function($c) { 
+        return $c['category_name'] . " (ID: " . $c['category_id'] . ")"; 
+    }, $categories));
+
+    if (!empty($apiKey)) {
+        $contentsParts = [];
+
+        if (!empty($audioBase64)) {
+            // Strip data:audio/xxx;base64, prefix if present
+            if (strpos($audioBase64, 'base64,') !== false) {
+                $parts = explode('base64,', $audioBase64);
+                $audioBase64 = end($parts);
+            }
+            $audioBase64 = trim($audioBase64);
+
+            $cleanMime = 'audio/webm';
+            if (preg_match('/audio\/[a-zA-Z0-9\-_]+/i', $mimeType, $mMatch)) {
+                $cleanMime = strtolower($mMatch[0]);
+            }
+
+            $contentsParts[] = [
+                'inlineData' => [
+                    'mimeType' => $cleanMime,
+                    'data'     => $audioBase64
+                ]
+            ];
+
+            $prompt = "You are a multilingual AI assistant for FixMyCampus campus issue reporting.
+Listen to this audio recording of a student reporting an issue on campus. The student may speak in English, Hindi, Marathi, or Konkani (or mixed languages).
+1. Transcribe the spoken audio message accurately.
+2. If spoken in Hindi, Marathi, Konkani, or any non-English language, translate it into clean, clear English.
+3. Extract structured ticket details.
+Available Categories: {$catList}.
+Priorities allowed: low, medium, high, critical.
+
+Return ONLY a valid JSON object (no markdown formatting, no backticks, no other text) with keys:
+- translated_text (English translation of what was spoken)
+- title (concise summary in English, max 8-10 words)
+- category_id (integer matching available categories)
+- category_name (string matching category)
+- location (specific campus building, floor, room, lab, or area extracted)
+- priority (low, medium, high, or critical)
+- description (clear detailed description of the reported issue in English)";
+
+            $contentsParts[] = ['text' => $prompt];
+        } else {
+            $prompt = "You are a multi-lingual AI assistant for FixMyCampus. A student spoke the following message in language ({$sourceLang}): \"{$rawText}\".
 1. Translate any non-English content (Hindi, Marathi, Konkani, etc.) into clear, professional English.
 2. Extract structured ticket details.
 Available Categories: {$catList}.
@@ -56,114 +117,165 @@ Return ONLY a valid JSON object (no markdown formatting, no backticks) with keys
 - priority (low, medium, high, or critical)
 - description (clear detailed description of the reported issue in English)";
 
-    $models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
-    foreach ($models as $m) {
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$m}:generateContent?key=" . $apiKey;
-        $postData = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
+            $contentsParts[] = ['text' => $prompt];
+        }
+
+        $models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+        foreach ($models as $m) {
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$m}:generateContent?key=" . $apiKey;
+            $postData = [
+                'contents' => [
+                    [
+                        'parts' => $contentsParts
                     ]
                 ]
-            ]
-        ];
+            ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-        
-        $res = curl_exec($ch);
-        if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
-            @curl_close($ch);
-        }
-
-        if ($res) {
-            $jsonRes = json_decode($res, true);
-            $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            $text = preg_replace('/```json\s*/i', '', $text);
-            $text = preg_replace('/```\s*/i', '', $text);
-            $text = trim($text);
-            $parsed = json_decode($text, true);
-            if ($parsed && !empty($parsed['title'])) {
-                $extracted = $parsed;
-                break;
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            
+            $res = curl_exec($ch);
+            if (function_exists('curl_close') && PHP_VERSION_ID < 80000 && is_resource($ch)) {
+                @curl_close($ch);
             }
-        }
-    }
-}
 
-// Fallback Rule-Based NLP Parser & Simple Translator
-if (!$extracted) {
-    $msgLower = strtolower($rawText);
-    
-    // Category Matching
-    $matchedCatId = $categories[0]['category_id'];
-    $matchedCatName = $categories[0]['category_name'];
-    
-    $catKeywords = [
-        'Electrical' => ['light', 'tube', 'switch', 'power', 'socket', 'plug', 'fan', 'ac', 'bijli', 'pankha', 'light nahi hai', 'spark'],
-        'Plumbing' => ['water', 'pipe', 'leak', 'flooding', 'tap', 'sink', 'drain', 'toilet', 'flush', 'washroom', 'paani', 'nal'],
-        'Cleanliness' => ['clean', 'trash', 'garbage', 'bin', 'dirty', 'stink', 'smell', 'dust', 'kuchra', 'safai'],
-        'Infrastructure' => ['wall', 'door', 'window', 'glass', 'ceiling', 'roof', 'floor', 'tile', 'stair', 'crack', 'darwaza', 'khidki'],
-        'IT' => ['wifi', 'internet', 'network', 'router', 'computer', 'pc', 'projector', 'hdmi', 'screen', 'lab pc'],
-        'Furniture' => ['chair', 'table', 'desk', 'bench', 'board', 'kursi', 'meez'],
-        'Safety' => ['lock', 'key', 'cctv', 'camera', 'fire', 'hazard', 'emergency', 'alarm', 'danger']
-    ];
-
-    foreach ($catKeywords as $key => $kwList) {
-        foreach ($kwList as $kw) {
-            if (strpos($msgLower, $kw) !== false) {
-                foreach ($categories as $c) {
-                    if (stripos($c['category_name'], $key) !== false || stripos($key, $c['category_name']) !== false) {
-                        $matchedCatId = $c['category_id'];
-                        $matchedCatName = $c['category_name'];
-                        break 2;
-                    }
+            if ($res) {
+                $jsonRes = json_decode($res, true);
+                $text = $jsonRes['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
+                $text = preg_replace('/```\s*$/i', '', $text);
+                $text = trim($text);
+                $parsed = json_decode($text, true);
+                if ($parsed && !empty($parsed['title'])) {
+                    $extracted = $parsed;
+                    break;
                 }
             }
         }
     }
 
-    $priority = 'medium';
-    if (preg_match('/(urgent|danger|hazard|fire|flood|spark|emergency|critical|khatra)/i', $rawText)) {
-        $priority = 'critical';
-    } elseif (preg_match('/(broken|not working|cannot|disrupt|high|kaam nahi kar raha)/i', $rawText)) {
-        $priority = 'high';
-    }
+    // Fallback Rule-Based NLP Parser & Simple Translator (if rawText was provided)
+    if (!$extracted && !empty($rawText)) {
+        $msgLower = strtolower($rawText);
+        
+        // Category Matching
+        $matchedCatId = $categories[0]['category_id'];
+        $matchedCatName = $categories[0]['category_name'];
+        
+        $catKeywords = [
+            'Electrical' => ['light', 'tube', 'switch', 'power', 'socket', 'plug', 'fan', 'ac', 'bijli', 'pankha', 'light nahi hai', 'spark'],
+            'Plumbing' => ['water', 'pipe', 'leak', 'flooding', 'tap', 'sink', 'drain', 'toilet', 'flush', 'washroom', 'paani', 'nal'],
+            'Cleanliness' => ['clean', 'trash', 'garbage', 'bin', 'dirty', 'stink', 'smell', 'dust', 'kuchra', 'safai'],
+            'Infrastructure' => ['wall', 'door', 'window', 'glass', 'ceiling', 'roof', 'floor', 'tile', 'stair', 'crack', 'darwaza', 'khidki'],
+            'IT' => ['wifi', 'internet', 'network', 'router', 'computer', 'pc', 'projector', 'hdmi', 'screen', 'lab pc'],
+            'Furniture' => ['chair', 'table', 'desk', 'bench', 'board', 'kursi', 'meez'],
+            'Safety' => ['lock', 'key', 'cctv', 'camera', 'fire', 'hazard', 'emergency', 'alarm', 'danger']
+        ];
 
-    $location = 'Campus Location';
-    if (preg_match('/(in|at|near|outside|mein|par)\s+([A-Za-z0-9\s\-]+?)(?=\s+(is|has|was|not|are|with|\.|\,|$))/i', $rawText, $locMatches)) {
-        $locCandidate = trim($locMatches[2]);
-        if (strlen($locCandidate) > 2 && strlen($locCandidate) < 50) {
-            $location = ucwords($locCandidate);
+        foreach ($catKeywords as $key => $kwList) {
+            foreach ($kwList as $kw) {
+                if (strpos($msgLower, $kw) !== false) {
+                    foreach ($categories as $c) {
+                        if (stripos($c['category_name'], $key) !== false || stripos($key, $c['category_name']) !== false) {
+                            $matchedCatId = $c['category_id'];
+                            $matchedCatName = $c['category_name'];
+                            break 2;
+                        }
+                    }
+                }
+            }
         }
-    } elseif (preg_match('/(room|lab|block|hall|floor|canteen|hostel|library|classroom|auditorium)\s*[A-Za-z0-9\-]+/i', $rawText, $locMatches)) {
-        $location = ucwords(trim($locMatches[0]));
+
+        $priority = 'medium';
+        if (preg_match('/(urgent|danger|hazard|fire|flood|spark|emergency|critical|khatra)/i', $rawText)) {
+            $priority = 'critical';
+        } elseif (preg_match('/(broken|not working|cannot|disrupt|high|kaam nahi kar raha)/i', $rawText)) {
+            $priority = 'high';
+        }
+
+        $location = 'Campus Location';
+        if (preg_match('/(in|at|near|outside|mein|par)\s+([A-Za-z0-9\s\-]+?)(?=\s+(is|has|was|not|are|with|\.|\,|$))/i', $rawText, $locMatches)) {
+            $locCandidate = trim($locMatches[2]);
+            if (strlen($locCandidate) > 2 && strlen($locCandidate) < 50) {
+                $location = ucwords($locCandidate);
+            }
+        } elseif (preg_match('/(room|lab|block|hall|floor|canteen|hostel|library|classroom|auditorium)\s*[A-Za-z0-9\-]+/i', $rawText, $locMatches)) {
+            $location = ucwords(trim($locMatches[0]));
+        }
+
+        $titleWords = explode(' ', $rawText);
+        $title = (count($titleWords) > 7) ? implode(' ', array_slice($titleWords, 0, 7)) . '...' : $rawText;
+        $title = ucfirst($title);
+
+        $extracted = [
+            'translated_text' => $rawText,
+            'title'           => $title,
+            'category_id'     => $matchedCatId,
+            'category_name'   => $matchedCatName,
+            'location'        => $location,
+            'priority'        => $priority,
+            'description'     => $rawText
+        ];
     }
 
-    $titleWords = explode(' ', $rawText);
-    $title = (count($titleWords) > 7) ? implode(' ', array_slice($titleWords, 0, 7)) . '...' : $rawText;
-    $title = ucfirst($title);
+    if (!$extracted) {
+        ob_clean();
+        $errMsg = !empty($audioBase64) 
+            ? 'Speech recorded, but audio transcription could not be completed. Please configure GEMINI_API_KEY or use Type / Dictate below.'
+            : 'Could not process speech input. Please try again or type details manually.';
+        echo json_encode([
+            'success' => false,
+            'error'   => $errMsg
+        ]);
+        exit();
+    }
 
-    $extracted = [
-        'translated_text' => $rawText,
-        'title'           => $title,
-        'category_id'     => $matchedCatId,
-        'category_name'   => $matchedCatName,
-        'location'        => $location,
-        'priority'        => $priority,
-        'description'     => $rawText
-    ];
+    // Validate & sanitize category_id and priority
+    $validCat = false;
+    if (!empty($extracted['category_id'])) {
+        foreach ($categories as $c) {
+            if ($c['category_id'] == $extracted['category_id']) {
+                $validCat = true;
+                $extracted['category_name'] = $c['category_name'];
+                break;
+            }
+        }
+    }
+    if (!$validCat && !empty($extracted['category_name'])) {
+        foreach ($categories as $c) {
+            if (stripos($c['category_name'], $extracted['category_name']) !== false || stripos($extracted['category_name'], $c['category_name']) !== false) {
+                $extracted['category_id'] = $c['category_id'];
+                $extracted['category_name'] = $c['category_name'];
+                $validCat = true;
+                break;
+            }
+        }
+    }
+    if (!$validCat && !empty($categories)) {
+        $extracted['category_id'] = $categories[0]['category_id'];
+        $extracted['category_name'] = $categories[0]['category_name'];
+    }
+
+    $extracted['priority'] = strtolower($extracted['priority'] ?? 'medium');
+    if (!in_array($extracted['priority'], ['low', 'medium', 'high', 'critical'])) {
+        $extracted['priority'] = 'medium';
+    }
+
+    ob_clean();
+    echo json_encode([
+        'success' => true,
+        'data'    => $extracted
+    ]);
+} catch (Throwable $e) {
+    ob_clean();
+    echo json_encode([
+        'success' => false,
+        'error'   => 'Voice auto-fill error: ' . $e->getMessage()
+    ]);
 }
-
-ob_clean();
-echo json_encode([
-    'success' => true,
-    'data'    => $extracted
-]);

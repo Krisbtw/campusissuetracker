@@ -212,6 +212,38 @@ Return ONLY a valid JSON object (no markdown formatting, no backticks) with keys
         ];
     }
 
+    if ($extracted) {
+        $validCat = false;
+        if (!empty($extracted['category_id'])) {
+            foreach ($categories as $c) {
+                if ($c['category_id'] == $extracted['category_id']) {
+                    $validCat = true;
+                    $extracted['category_name'] = $c['category_name'];
+                    break;
+                }
+            }
+        }
+        if (!$validCat && !empty($extracted['category_name'])) {
+            foreach ($categories as $c) {
+                if (stripos($c['category_name'], $extracted['category_name']) !== false || stripos($extracted['category_name'], $c['category_name']) !== false) {
+                    $extracted['category_id'] = $c['category_id'];
+                    $extracted['category_name'] = $c['category_name'];
+                    $validCat = true;
+                    break;
+                }
+            }
+        }
+        if (!$validCat && !empty($categories)) {
+            $extracted['category_id'] = $categories[0]['category_id'];
+            $extracted['category_name'] = $categories[0]['category_name'];
+        }
+
+        $extracted['priority'] = strtolower($extracted['priority'] ?? 'medium');
+        if (!in_array($extracted['priority'], ['low', 'medium', 'high', 'critical'])) {
+            $extracted['priority'] = 'medium';
+        }
+    }
+
     ob_clean();
     echo json_encode([
         'success' => true,
